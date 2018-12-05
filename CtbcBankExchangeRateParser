@@ -1,0 +1,187 @@
+package com.faraday.project.efaraday2013.utils;
+
+import com.faraday.project.efaraday2013.model.CommFtcExchangeRateVo;
+import org.apache.commons.lang.StringUtils;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+public class CtbcBankExchangeRateParser {
+
+    private static final String EXCHANGE_RATE_URL =
+            "https://www.ctbcbank.com/CTCBPortalWeb/toPage?id=TW_RB_CM_ebank_018001";
+
+    public enum Country {
+        US("USD_buyRate2", "USD_saleRate2"),
+        JP("JPY_buyRate2", "JPY_saleRate2"),
+        CN("CNY_buyRate2", "CNY_saleRate2"),
+        HK("HKD_buyRate2", "HKD_saleRate2"),
+        EU("EUR_buyRate2", "EUR_saleRate2"),
+        AU("AUD_buyRate2", "AUD_saleRate2"),
+        GB("GBP_buyRate2", "GBP_saleRate2"),
+        CA("CAD_buyRate2", "CAD_saleRate2"),
+        NZ("NZD_buyRate2", "NZD_saleRate2"),
+        ZA("ZAR_buyRate2", "ZAR_saleRate2"),
+        SG("SGD_buyRate2", "SGD_saleRate2"),
+        CH("CHF_buyRate2", "CHF_saleRate2"),
+        SE("SEK_buyRate2", "SEK_saleRate2"),
+        TH("THB_buyRate2", "THB_saleRate2"),
+        ID("IDR_buyRate2", "IDR_saleRate2"),
+        IN("INR_buyRate2", "INR_saleRate2"),
+        MY("MYR_buyRate2", "MYR_saleRate2"),
+        PH("PHP_buyRate2", "PHP_saleRate2"),
+        VN("VND_buyRate2", "VND_saleRate2"),
+        KR("KRW_buyRate2", "KRW_saleRate2");
+
+        private String instBuyRateID;
+        private String instSellRateID;
+
+        Country(String instBuyRateID, String instSellRateID) {
+            this.instBuyRateID = instBuyRateID;
+            this.instSellRateID = instSellRateID;
+        }
+    }
+
+
+    public static void main(String[] args) throws Exception {
+        CtbcBankExchangeRateParser parser = new CtbcBankExchangeRateParser();
+        Document htmlDoc = parser.loadExchangeRateHtml();
+
+        CommFtcExchangeRateVo rate = parser.parseRate(htmlDoc, Country.JP);
+
+        System.out.println(rate.getCurEn());
+        System.out.println(rate.getCurCh());
+        System.out.println(rate.getCashBuy());
+        System.out.println(rate.getCashSell());
+        System.out.println(rate.getSpotBuy());
+        System.out.println(rate.getSpotSell());
+    }
+
+
+    /**
+     * get
+     */
+    private Document loadExchangeRateHtml() throws Exception {
+        // Create a trust manager that does not validate certificate chains
+        TrustManager[] trustAllCerts = new TrustManager[] {new X509TrustManager() {
+            @Override
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return null;
+            }
+            @Override
+            public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+            }
+            @Override
+            public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+            }
+        }};
+
+        // Install the all-trusting trust manager
+        SSLContext sc = SSLContext.getInstance("SSL");
+        sc.init(null, trustAllCerts, new java.security.SecureRandom());
+        HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+        // Fetch url
+        Connection.Response response = Jsoup.connect(EXCHANGE_RATE_URL)
+                .proxy("cache1", 80)
+                .timeout(60 * 1000)
+                .method(Connection.Method.GET)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; WOW64; rv:41.0) Gecko/20100101 Firefox/41.0")
+                .execute();
+
+        Document document = response.parse();
+        return document;
+    }
+
+    /**
+     * parse India exchange rate
+     *
+     * 1. parse the exchange rate main table
+     *
+     * 2. parse the country exchange rate
+     *
+     *   <tr>
+     *     <td class="column_text" align="center">美元 / USD
+     *       <p align="right">
+     *         <a href="javascript:void(0);">
+     *           <img src="/images/icon_trend.gif" class="exchangeRateWindow" height="20" width="28" currencyCode="USD"/>
+     *         </a>
+     *       </p>
+     *     </td>
+     *     <td class="defaultDash column_text" align="center">30.501</td>
+     *     <td class="defaultDash column_text" align="center">31.078</td>
+     *     <td class="defaultDash column_text" id="USD_buyRate2" align="center">30.709</td>
+     *     <td class="defaultDash column_text" id="USD_saleRate2" align="center">30.87</td>
+     *   </tr>
+     */
+    private CommFtcExchangeRateVo parseRate(Document document, Country country) {
+        Element rateTable = document.select("table#mainTable").first();
+        Element instBuyRate = rateTable.select("td#" + country.instBuyRateID).first();
+        Element instSellRate = rateTable.select("td#" + country.instSellRateID).first();
+        Element cashSellRate = instBuyRate.previousElementSibling();
+        Element cashBuyRate = cashSellRate.previousElementSibling();
+
+        Element currency = cashBuyRate.previousElementSibling();
+        String tmp = StringUtils.substringBefore(currency.html(), "<p").trim();
+        String[] currs = tmp.split("/");
+
+        CommFtcExchangeRateVo rate = new CommFtcExchangeRateVo();
+        rate.setSpotBuy(instBuyRate.html());
+        rate.setSpotSell(instSellRate.html());
+        rate.setCashBuy(cashBuyRate.html());
+        rate.setCashSell(cashSellRate.html());
+        rate.setCurEn(currs[1].trim());
+        rate.setCurCh(currs[0].trim());
+        return rate;
+    }
+
+//    private String parseByApacheHttpClient(String url) throws Exception {
+//        /* timeout */
+//        int timeout = 30 * 1000;
+//        RequestConfig reqCfg = RequestConfig.custom()
+//                .setConnectionRequestTimeout(timeout)
+//                .setConnectTimeout(timeout)
+//                .setSocketTimeout(timeout)
+//                .build();
+//
+//        /* proxy */
+////        HttpHost proxy = new HttpHost("cache1", 80);
+////        DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
+//
+//        /* Builder for SSLContext instances */
+//        SSLContextBuilder builder = new SSLContextBuilder(); builder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
+//        /* create SSL connection Socket Factory object for trusting self-signed certificates */
+//        SSLConnectionSocketFactory sslcsf = new SSLConnectionSocketFactory( builder.build());
+//
+//        CloseableHttpClient client = HttpClientBuilder.create()
+//                .setDefaultRequestConfig(reqCfg)
+////                .setRoutePlanner(routePlanner)
+//                .setSSLSocketFactory(sslcsf)
+//                .build();
+//
+//        HttpGet get = new HttpGet(url);
+////        get.addHeader("User-Agent", "Apache HTTPClient");
+////        get.addHeader("Accept", "text/html,application/xhtml+xml");
+////        get.addHeader("Connection", "keep-alive");
+////        get.addHeader("Cache-Control", "no-cache");
+////        get.addHeader("Host", "www.ctbcbank.com");
+////        get.addHeader("Pragma", "no-cache");
+////        get.addHeader("User-Agent", "Mozilla/5.0");
+//        HttpResponse response = client.execute(get);
+//
+//        HttpEntity entity = response.getEntity();
+//        String content = EntityUtils.toString(entity);
+//        return content;
+//    }
+
+// 2018/12/04|16:00|__header_=0;col4=30.9700;col1=30.6400;col0=美金[USD];col3=30.7400;col2=30.3000;#__header_=0;col4=3.9770;col1=3.9010;col0=港幣[HKD];col3=3.9610;col2=3.7710;#__header_=0;col4=40.0200;col1=38.9100;col0=英鎊[GBP];col3=39.3100;col2=37.8800;#__header_=0;col4=0.2750;col1=0.2695;col0=日圓[JPY];col3=0.2736;col2=0.2623;#__header_=0;col4=23.0600;col1=22.5500;col0=澳幣[AUD];col3=22.7900;col2=22.2700;#__header_=0;col4=23.7500;col1=23.2200;col0=加拿大幣[CAD];col3=23.4200;col2=22.8400;#__header_=0;col4=22.8200;col1=22.4200;col0=新加坡幣[SGD];col3=22.6000;col2=21.9300;#__header_=0;col4=---;col1=2.2100;col0=南非幣[ZAR];col3=2.3100;col2=---;#__header_=0;col4=---;col1=3.3700;col0=瑞典幣[SEK];col3=3.4700;col2=---;#__header_=0;col4=31.2100;col1=30.7300;col0=瑞士法郎[CHF];col3=30.9300;col2=30.0200;#__header_=0;col4=0.9980;col1=0.9180;col0=泰幣[THB];col3=0.9600;col2=0.8080;#__header_=0;col4=21.7500;col1=21.2700;col0=紐西蘭幣[NZD];col3=21.4700;col2=20.8800;#__header_=0;col4=35.4600;col1=34.7400;col0=歐元[EUR];col3=35.1400;col2=34.1200;#__header_=0;col4=0.0299;col1=---;col0=韓幣[KRW];col3=---;col2=0.0258;#__header_=0;col4=7.9040;col1=---;col0=馬來幣[MYR];col3=---;col2=6.2850;#__header_=0;col4=0.0025;col1=---;col0=印尼幣[IDR];col3=---;col2=0.0018;#__header_=0;col4=0.6550;col1=---;col0=菲律賓幣[PHP];col3=---;col2=0.5430;#__header_=0;col4=3.9640;col1=---;col0=澳門幣[MOP];col3=---;col2=3.5440;#__header_=0;col4=0.0016;col1=---;col0=越南幣[VND];col3=---;col2=0.0011;#__header_=0;col4=4.5510;col1=4.4600;col0=人民幣[CNY];col3=4.5100;col2=4.3890;|120000
+
+}
+
+
