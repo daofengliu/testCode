@@ -1,0 +1,65 @@
+==== sitemesh ====
+== 1. /WEB-INF/web.xml ==
+先設定 web.xml 的 filter (符合 URL pattern 才會套用 sitemesh)
+
+<filter>
+    <filter-name>sitemesh</filter-name>
+    <filter-class>com.opensymphony.module.sitemesh.filter.PageFilter</filter-class>
+</filter>
+<filter-mapping>
+    <filter-name>sitemesh</filter-name>
+    <!--<url-pattern>/*</url-pattern>-->
+    <url-pattern>/main/employee/*</url-pattern>
+</filter-mapping>
+
+== 2. /WEB-INF/decorators.xml ==
+defaultdir -> 設定預設 template 所在的目錄
+
+<?xml version="1.0" encoding="UTF-8"?>
+<decorators defaultdir="/include">
+    <excludes>
+        <pattern>/exclude/*</pattern>
+        <pattern>/storyboard/*</pattern>
+        <pattern>/resources/**</pattern>
+    </excludes>
+    <decorator name="main" page="main.jsp">
+        <pattern>/main/employee/*</pattern>
+    </decorator>
+</decorators>
+
+== 3. template page (JSP) ==
+
+<%@taglib prefix="decorator" uri="http://www.opensymphony.com/sitemesh/decorator" %>
+
+<decorator:title default="${title}" />
+  Insert title of page being decorated.
+  The value is obtained from <title> tag.
+
+<decorator:getProperty property="${prop}" [ default="${default}" ] [ writeEntireProperty="true|false" ]/>
+  Insert property of original page.
+
+<decorator:head></decorator:head>
+  Insert contents of original page's HTML <head> tag.
+  The enclosing tag will not be be written, but its contents will.
+  _被裝飾頁面的 head 內容
+  
+<decorator:body></decorator:body>
+  Insert contents of original page's HTML <body> tag.
+  The enclosing tag will not be be written, but its contents will.
+  _被裝飾頁面的 body 內容
+
+<decorator:usePage id="${id}" />
+  Expose the Page object as a variable to the decorator JSP.
+
+<page:applyDecorator name="${name}" [ page="${page}" title="${title}" ] >
+    .....
+</page:applyDecorator>
+  Apply a Decorator to specified content.
+  The content can either be inline by specifying a body to the tag, or by using the result of another page by specifying the page attribute.
+
+<page:param name="${name}">
+    ...
+</page:param>
+  Pass a parameter to a Decorator.
+  This will override the value called from Page.getProperty() or <decorator:getProperty/>.
+  This tag is only valid inside a <page:applyDecorator> tag.
