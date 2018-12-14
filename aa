@@ -1,0 +1,239 @@
+==== Difference between "/*" and "/**" in Spring MVC paths ====
+An asterisk ('*') matches zero or more characters, up to the occurrence of a '/' character (which serves as a path separator). A string, such as "/abcd/docs/index.html", would not match successfully against the pattern '/*/*.index.html'. The first asterisk matches up to the first path separator only, resulting in the "abcd" string. A successful matching pattern would be '/*/*/*.html'.
+A string containing two asterisks ('**') matches zero or more characters. This could include the path separator '/'. In this case, "/abcd/docs/index.html" would successfully match the '/**/*.html' pattern. The double asterisk, including the path separator, would match the "abcd/docs" string.
+
+So to sum up "/**" takes into account even the subpaths that may include the "/" i.e the path separator.
+
+== AntPathMatcher (org.springframework.util.AntPathMatcher) ==
+This is a path pattern that used in Apache ant, spring team implement it and use it throughout the framework.
+
+The mapping matches URLs using the following rules:
+
+? matches one character
+* matches zero or more characters
+** matches zero or more 'directories' in a path
+
+Some examples:
+  com/t?st.jsp - matches com/test.jsp but also com/tast.jsp or com/txst.jsp
+  com/*.jsp - matches all .jsp files in the com directory
+  com/**/test.jsp - matches all test.jsp files underneath the com path
+  org/springframework/**/*.jsp - matches all .jsp files underneath the org/springframework path
+  org/**/servlet/bla.jsp - matches org/springframework/servlet/bla.jsp but also org/springframework/testing/servlet/bla.jsp and org/servlet/bla.jsp
+
+
+==== 亂碼 ====
+== HTML ==
+1. <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+== JSP ==
+1. <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+
+== Weblogic ==
+1. check weblogic encoding
+  1.1. ${weblogic_path}/severs/AdminServer/logs/AdminServer.log
+  1.2. 搜尋 file.encoding，顯示 weblogic 啟動時使用的文件編碼
+  1.3. ${weblogic_path}/bin/startWebLogic.cmd (或 startWebLogic.sh)
+       set JAVA_OPTIONS -> set JAVA_OPTIONS -Ddefault.client.encoding=UTF-8 -Dfile.encoding=UTF-8
+
+2. weblogic.xml -> charset-params
+    The charset-params element is used to define code set behavior for non-unicode operations.
+	Weblogic Server 需要把 HTTP request (GET, POST) 的資料，由它的原始編碼轉為 Unicode，以便 Java Servlet API 進行處理。
+	為了處理這些轉換，Weblogic Server 需要知道 HTTP request 的資料編碼方式，可以透過 weblogic.xml 的 <charset-params> 設定
+
+    <weblogic-web-app>
+	    ...
+        <charset-params> 
+            <input-charset> 
+                <resource-path>/*</resource-path> 
+                <java-charset-name>UTF-8</java-charset-name> 
+            </input-charset> 
+        </charset-params>
+	</weblogic-web-app>
+  
+  
+  
+  
+  
+  
+  == Servlet 2.3 deployment descriptor ==
+<!DOCTYPE web-app PUBLIC
+    "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+    "http://java.sun.com/dtd/web-app_2_3.dtd" >
+<web-app>
+    <display-name>Servlet 2.3 Web Application</display-name>
+</web-app>
+
+
+== Servlet 2.4 deployment descriptor ==
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd"
+    version="2.4">
+
+  <display-name>Servlet 2.4 Web Application</display-name>
+</web-app>
+
+
+== Servlet 2.5 deployment descriptor ==
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+    version="2.5">
+</web-app>
+
+
+== Servlet 3.0 deployment descriptor ==
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_3_0.xsd"
+    version="3.0">
+</web-app>
+
+
+== Servlet 3.1 deployment descriptor ==
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+    version="3.1">
+</web-app>
+
+
+== Servlet 4.0 deployment descriptor ==
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+    version="4.0">
+</web-app>
+
+
+== metadata-complete ==
+<web-app ...
+    metadata-complete="false">
+</web-app>
+
+
+
+
+
+
+
+
+
+
+Java Session Timeout
+
+== 1. Global Session Timeout in the web.xml ==
+
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app>
+    <session-config>
+        <session-timeout>10</session-timeout>
+    </session-config>
+</web-app>
+
+
+== 2. Programmatic Timeout per individual Session ==
+
+HttpSession session = request.getSession();
+session.setMaxInactiveInterval(10 * 60);
+
+
+== 3. Tomcat Session Timeout ==
+
+$tomcat_home/conf/web.xml
+$jetty_home/etc/webdefault.xml
+
+  <session-timeout>
+  
+  
+
+
+
+
+==== https ====
+== web.xml ==
+
+<security-constraint>
+    <web-resource-collection>
+        <web-resource-name>SecureConnection</web-resource-name>
+        <url-pattern>*</url-pattern>
+        <http-method>GET</http-method>
+        <http-method>POST</http-method>
+    </web-resource-collection>
+    <user-data-constraint>
+        <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+    </user-data-constraint>
+</security-constraint>
+
+
+
+
+
+
+
+
+
+package idv.util.config.apache.configuration;
+
+import org.apache.commons.configuration2.XMLConfiguration;
+import org.apache.commons.configuration2.builder.BuilderParameters;
+import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
+import org.apache.commons.configuration2.builder.fluent.Parameters;
+import org.apache.commons.configuration2.ex.ConfigurationException;
+
+import java.net.URL;
+
+public class Demo {
+
+    public static void main(String[] args) {
+        new Demo().invoke();
+    }
+
+    public void invoke() {
+        XMLConfiguration cfg = loadConfig();
+        System.out.println(cfg.getString("database.port"));
+    }
+
+    /**
+     * org.apache.commons.configuration2.ex.ConfigurationException:
+     *   Load operation not properly initialized!
+     *   Do not call read(InputStream) directly, but use a FileHandler to load a configuration.
+     */
+//    private XMLConfiguration loadConfig() {
+//        InputStream is = null;
+//        XMLConfiguration cfg = new XMLConfiguration();
+//        try {
+//            is = Demo.class.getResourceAsStream("test.xml");
+//            cfg.read(is);
+//        } catch (ConfigurationException | IOException ex) {
+//            ex.printStackTrace();
+//        } finally {
+//            try {
+//                is.close();
+//            } catch (IOException ex) {
+//                ex.printStackTrace();
+//            }
+//        }
+//        return cfg;
+//    }
+    private XMLConfiguration loadConfig() {
+        URL url = Demo.class.getResource("test.xml");
+
+        Parameters params = new Parameters();
+//        BuilderParameters prop = params.xml().setFileName("test.xml");
+        BuilderParameters prop = params.xml().setURL(url);
+
+        FileBasedConfigurationBuilder<XMLConfiguration> builder =
+                new FileBasedConfigurationBuilder<XMLConfiguration>(XMLConfiguration.class)
+                    .configure(prop);
+        XMLConfiguration cfg = null;
+        try {
+            cfg = builder.getConfiguration();
+        } catch(ConfigurationException ex) {
+            ex.printStackTrace();
+        }
+        return cfg;
+    }
+
+}
