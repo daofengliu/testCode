@@ -1,0 +1,105 @@
+# -*- coding: UTF-8 -*-
+
+'''
+========== O'REILLY - Data Visualization with Python and JavaScript ==========
+==== Getting Data off the Web with Python ====
+The main ways to get data off the web are:
+  1. Get a raw data-file over HTTP
+     __由 HTTP 下載某種格式儲存的原始資料檔案 (JSON or CSV)
+  2. Use a dedicated API to get the data
+     __由專屬 API 取得資料
+  3. Scrape the data by getting web pages by HTTP and parsing them locally for content
+     __由 HTTP 抓網頁爬取資料，並在本地端解析，取得需要的部份
+
+==== Getting Web-data with the requests library ====
+  == install ==
+  pip install requests
+  pip3.7 install requests (Python 3.7)  
+'''
+
+'''
+==== Make a Request ====
+import requests
+
+response = requests.get(URL)
+response = requests.post(URL, data = {'key':'value'})
+response = requests.put(URL, data = {'key':'value'})
+response = requests.delete(URL)
+response = requests.head(URL)
+response = requests.options(URL)
+*************************************************************************
+@see Python /Lib/site-packages/requests/api.py
+*************************************************************************
+  
+==== Passing Parameters In URLs ====
+varHeaders = {'user-agent': 'Mozilla/5.0 (Macintosh Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'}
+varParams = {'key1': 'value1', 'key2': 'value2', ...}
+response = requests.get(URL, headers=varHeaders, params=varParams)
+
+==== Binary Response Content ====
+from PIL import Image
+from io import BytesIO
+
+i = Image.open(BytesIO(response.content))
+
+==== JSON Response Content ====
+response = requests.get(URL)
+response.json()
+__回傳值為 JSON 格式時
+
+ps. In case the JSON decoding fails, r.json() raises an exception.
+    For example, if the response gets a 204 (No Content), or if the response contains invalid JSON,
+      attempting r.json() raises ValueError: No JSON object could be decoded.
+
+==== Raw Response Content ====
+response = requests.get(URL, stream=True)
+response.raw
+
+==== POST a Multipart-Encoded File ====
+#files = {'file': open('report.xls', 'rb')}
+files = {'file': ('report.xls', open('report.xls', 'rb'), 'application/vnd.ms-excel', {'Expires': '0'})}
+response = requests.post(URL, files=files)
+
+'''
+
+import requests
+
+URL = "https://www.google.com"
+response = requests.get(URL)
+# print(dir(response))         #### [... 'content', 'cookies', 'elapsed', 'encoding', 'headers', ... 'request', 'status_code', 'text', 'url']
+# print(response.status_code) #### 200
+# print(response.headers)     #### {'Content-Type': 'text/html; charset=ISO-8859-1', ...}  
+# print(response.url)         #### 
+# print(response.content)     ####
+# print(response.text)        ####
+
+
+'''
+==== Session Objects ====
+import requests
+
+session = requests.Session()
+'''
+
+session = requests.Session()
+session.get('https://httpbin.org/cookies/set/sessioncookie/123456789')
+r = s.get('https://httpbin.org/cookies')
+print(r.text)
+
+
+'''
+==== Using Python to Consume Data from a Web-API ====
+The most popular data formats for web-APIs are JSON and XML
+Three main types of API inhabit the web
+  1. REST
+     short for Representational state transfer
+     using a combination of HTTP verbs (GET, POST etc.) and Uniform Resource Identifiers (URIs)
+     __建議使用 RESTful API
+  2. XML-RPC
+     a remote procedure call (RPC) protocol using XML encoding and HTTP transport.
+  3. SOAP
+     short for "Simple Object Access Protocol", using XML and HTTP
+
+==== Using a RESTful Web-API with requests ====
+
+'''
