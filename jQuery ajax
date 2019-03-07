@@ -1,0 +1,426 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>jQuery AJAX</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function() {
+});
+
+/*
+ * ==== The jqXHR Object ====
+ * The jqXHR Object
+ * The jQuery XMLHttpRequest (jqXHR) object returned by $.ajax() as of jQuery 1.5
+ *   is a superset of the browser's native XMLHttpRequest object.
+ * For example, it contains responseText and responseXML properties, as well as a getResponseHeader() method.
+ * When the transport mechanism is something other than XMLHttpRequest (for example, a script tag for a JSONP request)
+ *   the jqXHR object simulates native XHR functionality where possible.
+ *
+ * ==== jQuery.ajax() ====
+ * var jqXHR = jQuery.ajax( [settings ] )       - jQuery 1.0
+ * var jqXHR = jQuery.ajax( url [, settings ] ) - jQuery 1.5
+ *
+ * url: (default: The current page)
+ *   Type: String
+ *   A string containing the URL to which the request is sent.
+ *
+ * settings:
+ *   Type: PlainObject
+ *   A set of key/value pairs that configure the Ajax request.
+ *   All settings are optional.
+ *   A default can be set for any option with $.ajaxSetup().
+ *
+ * ==== jQuery.ajax() settings ====
+ * async: (default true)
+ *   Type: Boolean
+ *   By default, all requests are sent asynchronously (i.e. this is set to true by default).
+ *   If you need synchronous requests, set this option to false.
+ *   Cross-domain requests and dataType: "jsonp" requests do not support synchronous operation.
+ *   Note that synchronous requests may temporarily lock the browser, disabling any actions while the request is active.
+ *   ===========================================================================
+ *   As of jQuery 1.8, the use of async: false with jqXHR ($.Deferred) is deprecated; you must use the success/error/complete
+ *     callback options instead of the corresponding methods of the jqXHR object such as jqXHR.done().
+ *   ===========================================================================
+ *         
+ * cache: (default: true, false for dataType 'script' and 'jsonp')
+ *   Type: Boolean
+ *   If set to false, it will force requested pages not to be cached by the browser.
+ *   Note: Setting cache to false will only work correctly with HEAD and GET requests.
+ *     _設定 cache: false 只會在 http method 為 HEAD 和 GET 生效
+ *   It works by appending "_={timestamp}" to the GET parameters.
+ *   The parameter is not needed for other types of requests, except in IE8 when a POST is made to a URL
+ *     that has already been requested by a GET.
+ *
+ * method: (default: 'GET')
+ *   Type: String
+ *   The HTTP method to use for the request (e.g. "POST", "GET", "PUT").
+ *   (version added: 1.9.0)
+ *   _1.9.0 以後使用 method
+ *
+ * type: (default: 'GET')
+ *   Type: String
+ *   An alias for method.
+ *   You should use type if you're using versions of jQuery prior to 1.9.0.
+ *   _1.9.0 以前使用 type
+ *
+ * data:
+ *   Type: PlainObject or String or Array
+ *   Data to be sent to the server.
+ *   It is converted to a query string, if not already a string.
+ *   It's appended to the url for GET-requests.
+ *   See "processData" option to prevent this automatic processing.
+ *     _如果不想要 data 被轉為 query string, 看 "processData" 這個參數設定
+ *   Object must be Key/Value pairs.
+ *   If value is an Array, jQuery serializes multiple values with same key based on the value of the "traditional" setting
+ *     _如果資料的值是陣列，且有設定 "traditional" 的話，jQuery serializes 為相同的 key，
+ *   ex:
+ *     default (沒設定 traditional: true)
+ *       -> ?aaa%5B%5D=111&aaa%5B%5D=222&aaa%5B%5D=333 (ASCII code: 5B="[", 5D = "]")
+ *     traditional: true
+ *       -> ?aaa=111&aaa=222&aaa=333
+ *       
+ * dataType: (default: Intelligent Guess (xml, json, script, or html))
+ *   Type: String
+ *   The type of data that you're expecting back from the server.
+ *   If none is specified, jQuery will try to infer it based on the MIME type of the response (an XML MIME type will yield XML,
+ *     in 1.4 JSON will yield a JavaScript object, in 1.4 script will execute the script, and anything else will be returned as a string).
+ *   The available types (and the result passed as the first argument to your success callback) are:
+ *     1. xml:
+ *     2. html:
+ *     3. script:
+ *     4. json:
+ *     5. jsonp:
+ *     6. text:
+ *
+ * jsonp:
+ *   Type: String or Boolean
+ *   Override the callback function name in a JSONP request.
+ *
+ * headers: (default: {})
+ *   Type: PlainObject
+ *
+ * contents:
+ *   Type: PlainObject
+ *   An object of string/regular-expression pairs that determine how jQuery will parse the response, given its content type.
+ *   (version added: 1.5)
+ *
+ * contentType: (default: "application/x-www-form-urlencoded; charset=UTF-8")
+ *   Type: Boolean or String
+ *
+ * context:
+ *   Type: PlainObject
+ *   This object will be the context of all Ajax-related callbacks.
+ *   By default, the context is an object that represents the Ajax settings used in the call ($.ajaxSettings merged with the settings passed to $.ajax).
+ *   For example, specifying a DOM element as the context will make that the context for the complete callback of a request, like so:
+ *
+ * mimeType:
+ *   Type: String
+ *   A mime type to override the XHR mime type.
+ *   (version added: 1.5.1)
+ *
+ * xhr: (default: ActiveXObject when available (IE), the XMLHttpRequest otherwise)
+ *   Type: Function()
+ *   Callback for creating the XMLHttpRequest object.
+ *   Defaults to the ActiveXObject when available (IE), the XMLHttpRequest otherwise.
+ *   Override to provide your own implementation for XMLHttpRequest or enhancements to the factory.
+ *
+ * converters: (default: {"* text": window.String, "text html": true, "text json": jQuery.parseJSON, "text xml": jQuery.parseXML})
+ *   Type: PlainObject
+ *   An object containing dataType-to-dataType converters.
+ *   Each converter's value is a function that returns the transformed value of the response.
+ *   (version added: 1.5)
+ *
+ * processData: (default: true)
+ *   Type: Boolean
+ *   By default, data passed in to the data option as an object (technically, anything other than a string)
+ *     will be processed and transformed into a query string, fitting to the default content-type "application/x-www-form-urlencoded".
+ *   If you want to send a DOMDocument, or other non-processed data, set this option to false.
+ *
+ * crossDomain: (default: false for same-domain requests, true for cross-domain requests)
+ *   Type: Boolean
+ *   If you wish to force a crossDomain request (such as JSONP) on the same domain, set the value of crossDomain to true.
+ *   This allows, for example, server-side redirection to another domain.
+ *   (version added: 1.5)
+ *
+ * global: (default: true)
+ *   Type: Boolean
+ *   Whether to trigger global Ajax event handlers for this request.
+ *   The default is true.
+ *   Set to false to prevent the global handlers like ajaxStart or ajaxStop from being triggered.
+ *   This can be used to control various Ajax Events.
+ *
+ * statusCode: (default: {})
+ *   Type: PlainObject
+ *   An object of numeric HTTP codes and functions to be called when the response has the corresponding code.
+ *   For example, the following will alert when the response status is a 404:
+ *       $.ajax({
+ *           statusCode: {
+ *               404: function() {
+ *                   alert( "page not found" );
+ *               }
+ *           }
+ *       });
+ *
+ * traditional:
+ *   Type: Boolean
+ *   Set this to true if you wish to use the traditional style of param serialization.
+ *   @see: jQuery.param()
+ *
+ * timeout:
+ *   Type: Number
+ *   Set a timeout (in milliseconds) for the request.
+ *   This will override any global timeout set with $.ajaxSetup().
+ *   The timeout period starts at the point the $.ajax call is made; if several other requests are in progress and the browser
+ *     has no connections available, it is possible for a request to time out before it can be sent.
+ *   In jQuery 1.4.x and below, the XMLHttpRequest object will be in an invalid state if the request times out;
+ *     accessing any object members may throw an exception.
+ *   In Firefox 3.0+ only, script and JSONP requests cannot be cancelled by a timeout; the script will run even if it arrives after the timeout period.
+ *
+ * username:
+ *   Type: String
+ *   A username to be used with XMLHttpRequest in response to an HTTP access authentication request.
+ *
+ * password:
+ *   Type: String
+ *   A password to be used with XMLHttpRequest in response to an HTTP access authentication request.
+ *
+ * ==== jQuery.ajax() callback ====
+ * == Callback Function Queues ==
+ * As of jQuery 1.5, the fail and done, and, as of jQuery 1.6, always callback hooks are first-in, first-out managed queues,
+ *   allowing for more than one callback for each hook.
+ * See Deferred object methods, which are implemented internally for these $.ajax() callback hooks.
+ *
+ * The callback hooks provided by $.ajax() are as follows:
+ *   1. beforeSend
+ *        callback option is invoked; it receives the jqXHR object and the settings object as parameters.
+ *   2. error
+ *        callback option is invoked, if the request fails.
+ *        It receives the jqXHR, a string indicating the error type, and an exception object if applicable.
+ *        Some built-in errors will provide a string as the exception object: "abort", "timeout", "No Transport".
+ *   3. dataFilter
+ *        callback option is invoked immediately upon successful receipt of response data.
+ *        It receives the returned data and the value of dataType, and must return the (possibly altered) data to pass on to success.
+ *   4. success
+ *        callback option is invoked, if the request succeeds.
+ *        It receives the returned data, a string containing the success code, and the jqXHR object.
+ *   5. Promise callbacks —
+ *        .done(), .fail(), .always(), and .then() — are invoked, in the order they are registered.
+ *   6. complete
+ *        callback option fires, when the request finishes, whether in failure or success.
+ *        It receives the jqXHR object, as well as a string containing the success or error code.
+ *
+ * dataFilter:
+ *   Type: Function(String data, String type) => Anything
+ *   A function to be used to handle the raw response data of XMLHttpRequest.
+ *   This is a pre-filtering function to sanitize the response.
+ *   You should return the sanitized data.
+ *   The function accepts two arguments: The raw data returned from the server and the 'dataType' parameter.
+ *       
+ * beforeSend:
+ *   Type: Function(jqXHR jqXHR, PlainObject settings)
+ *   A pre-request callback function that can be used to modify the jqXHR (in jQuery 1.4.x, XMLHTTPRequest) object before it is sent.
+ *   Use this to set custom headers, etc.
+ *   The jqXHR and settings objects are passed as arguments.
+ *   This is an Ajax Event.
+ *   Returning false in the beforeSend function will cancel the request.
+ *   _回傳 false 可以取消這個 AJAX 請求
+ *   As of jQuery 1.5, the beforeSend option will be called regardless of the type of request.
+ *         
+ * complete:
+ *   Type: Function(jqXHR jqXHR, String textStatus)
+ *   A function to be called when the request finishes (after success and error callbacks are executed).
+ *   The function gets passed two arguments: The jqXHR (in jQuery 1.4.x, XMLHTTPRequest) object and a string categorizing
+ *     the status of the request ("success", "notmodified", "nocontent", "error", "timeout", "abort", or "parsererror").
+ *   As of jQuery 1.5, the complete setting can accept an array of functions.
+ *   Each function will be called in turn.
+ *   This is an Ajax Event.
+ *       
+ * success:
+ *   Type: Function(Anything data, String textStatus, jqXHR jqXHR)
+ *   A function to be called if the request succeeds.
+ *   The function gets passed three arguments: The data returned from the server, formatted according to the dataType parameter
+ *     or the dataFilter callback function, if specified; a string describing the status; and the jqXHR (in jQuery 1.4.x, XMLHttpRequest) object.
+ *   As of jQuery 1.5, the success setting can accept an array of functions.
+ *   Each function will be called in turn.
+ *   This is an Ajax Event.
+ *       
+ * error:
+ *   Type: Function(jqXHR jqXHR, String textStatus, String errorThrown )
+ *   Possible values for the second argument (besides null) are "timeout", "error", "abort", and "parsererror".
+ *   When an HTTP error occurs, errorThrown receives the textual portion of the HTTP status, such as "Not Found" or "Internal Server Error.
+ *
+ * ==== The jqXHR Object ====
+ * The jqXHR objects returned by $.ajax() as of jQuery 1.5 implement the Promise interface,
+ *   giving them all the properties, methods, and behavior of a Promise (see Deferred object for more information).
+ * These methods take one or more function arguments that are called when the $.ajax() request terminates.
+ * This allows you to assign multiple callbacks on a single request, and even to assign callbacks after the request may have completed.
+ * (If the request is already complete, the callback is fired immediately.)
+ * Available Promise methods of the jqXHR object include:
+ *
+ *   == jqXHR.done(function(data, textStatus, jqXHR) {}); ==
+ *   An alternative construct to the success callback option, refer to deferred.done() for implementation details.
+ *
+ *   == jqXHR.fail(function(jqXHR, textStatus, errorThrown) {}); ==
+ *   An alternative construct to the error callback option, the .fail() method replaces the deprecated .error() method.
+ *   Refer to deferred.fail() for implementation details.
+ *
+ *   == jqXHR.always(function(data|jqXHR, textStatus, jqXHR|errorThrown) {}); ==
+ *   added in jQuery 1.6
+ *   An alternative construct to the complete callback option, the .always() method replaces the deprecated .complete() method.
+ *   In response to a successful request, the function's arguments are the same as those of .done(): data, textStatus, and the jqXHR object.
+ *   For failed requests the arguments are the same as those of .fail(): the jqXHR object, textStatus, and errorThrown.
+ *   Refer to deferred.always() for implementation details.
+ *
+ *   == jqXHR.then(function(data, textStatus, jqXHR) {}, function(jqXHR, textStatus, errorThrown) {}); ==
+ *   Incorporates the functionality of the .done() and .fail() methods, allowing (as of jQuery 1.8) the underlying Promise to be manipulated.
+ *   Refer to deferred.then() for implementation details.
+ *
+ * == Deprecation Notice ==
+ * The jqXHR.success(), jqXHR.error(), and jqXHR.complete() callbacks are removed as of jQuery 3.0.
+ * You can use jqXHR.done(), jqXHR.fail(), and jqXHR.always() instead.
+ */
+
+/*
+ * http://localhost:8080/orangec/pages/jsLib/jquery/ajax.html
+ * @see: idv.javaee.webservice.jaxrs.jersey2x.config.JaxRSConfig
+ * @see: idv.javaee.webservice.jaxrs.jersey2x.service.basic.BookService
+ */
+function getBook() {
+    // var jqXHR =
+    // $.ajax({
+    //     //async: true,
+    //     //cache: true,
+    //     method: "GET", /* type: "GET", (1.9.0 之前使用 type) */
+    //     url: "http://localhost:8080/orangec/rest/book",
+    //     // data: {"aaa": "bbb"},
+    //     dataType: "json",
+    //     beforeSend: function(jqXHR, settings) {
+    //         console.log("==================== beforeSend: ====================");
+    //         console.log("jqXHR = " + JSON.stringify(jqXHR) +
+    //                     "\nsettings = " + JSON.stringify(settings));
+    //     },
+    //     error: function(jqXHR, status, error) {
+    //         console.log("==================== error: ====================");
+    //         console.log("jqXHR = " + JSON.stringify(jqXHR) +
+    //                     "\nstatus = " + status +
+    //                     "\nerror = " + error);
+    //     },
+    //     dataFilter: function(dataStr, type) {
+    //         console.log("==================== dataFilter: ====================");
+    //         console.log("dataStr = " + dataStr + " (data type = " + typeof(dataStr) + ")" +
+    //                     "\ntype = " + type);
+    //
+    //         var json = JSON.parse(dataStr);
+    //         json[json.length] = {"id":"999", "title":"yoyo", "price":900.0};
+    //         /* 直接 return json 會導致 parser error，所以必須回傳 string 格式的資料，ajax() 自己會轉成 json??? */
+    //         //return json;
+    //         return JSON.stringify(json);
+    //
+    //         /*
+    //          * TODO:
+    //          *   {"id":"001","title":"Java","price":10.0} 被 ajax 轉成 JSON 後變 {"id":"001","title":"Java","price":10}
+    //          *   ajax() 預設使用的 converters -> "text json": jQuery.parseJSON
+    //          *   如何保留小數點後的值??? 後端用 String 取代 double?
+    //          *
+    //          *   jQuery.parseJSON() 和 JSON.parse() 小數點後的值為 0 時都沒保留
+    //          */
+    //     },
+    //     success: function(dataObj, status, jqXHR) {
+    //         console.log("====================success: ====================");
+    //         console.log("dataObj = " + JSON.stringify(dataObj) + " (data type = " + typeof(dataObj) + ")" +
+    //                     "\nstatus = " + status +
+    //                     "\njqXHR = " + JSON.stringify(jqXHR));
+    //         var bookList = dataObj;
+    //         var bookInfo = "";
+    //         for (var i = 0; i < bookList.length; i++) {
+    //             var book = bookList[i];
+    //             bookInfo += "<div>" + book.title + " ($" + book.price + ")</div>";
+    //         }
+    //         $('#bookInfo').append(bookInfo);
+    //     },
+    //     complete: function(jqXHR, status) {
+    //         console.log("==================== complete: ====================");
+    //         console.log("jqXHR = " + JSON.stringify(jqXHR) +
+    //                     "\nstatus = " + status);
+    //     }
+    // });
+    /**
+     * ==================== beforeSend: ====================
+     * jqXHR = {"readyState":0}
+     * settings = {"url":"http://localhost:8080/orangec/rest/book","type":"GET","isLocal":false,"global":true,"processData":true,"async":true,"contentType":"application/x-www-form-urlencoded; charset=UTF-8","accepts":{text":"text/plain","html":"text/html","xml":"application/xml, text/xml","json":"application/json, text/javascript","script":"text/javascript, application/javascript, application/ecmascript, application/x-ecmascript"},"contents":{"xml":{},"html":{},"json":{},"script":{}},"responseFields":{"xml":"responseXML","text":"responseText","json":"responseJSON"},"converters":{"text html":true},"flatOptions":{"url":true,"context":true},"jsonp":"callback","method":"GET","dataType":"json","dataTypes":["json"],"crossDomain":false,"hasContent":false}
+     * ==================== dataFilter: ====================
+     * dataStr = [{"id":"001","title":"Java","price":10.0},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6}] (data type = string)
+     * type = json
+     * ====================success: ====================
+     * dataObj = [{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6},{"id":"999","title":"yoyo","price":900}] (data type = object)
+     * status = success
+     * jqXHR = {"readyState":4,"responseText":"[{\"id\":\"001\",\"title\":\"Java\",\"price\":10.0},{\"id\":\"002\",\"title\":\"Javascript\",\"price\":9.3},{\"id\":\"003\",\"title\":\"Java EE\",\"price\":15.6}]","responseJSON":[{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6},{"id":"999","title":"yoyo","price":900}],"status":200,"statusText":"OK"}
+     * ==================== complete: ====================
+     * jqXHR = {"readyState":4,"responseText":"[{\"id\":\"001\",\"title\":\"Java\",\"price\":10.0},{\"id\":\"002\",\"title\":\"Javascript\",\"price\":9.3},{\"id\":\"003\",\"title\":\"Java EE\",\"price\":15.6}]","responseJSON":[{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6},{"id":"999","title":"yoyo","price":900}],"status":200,"statusText":"OK"}
+     * status = success
+     */
+
+    var jqXHR =
+    $.ajax({
+        //async: true,
+        //cache: true,
+        method: "GET", /* type: "GET", (1.9.0 之前使用 type) */
+        url: "http://localhost:8080/orangec/rest/book",
+        // data: {"aaa": "bbb"},
+        dataType: "json"
+    }).done(function(dataObj, status, jqXHR) {
+        console.log("==================== jqXHR.done() ====================");
+        console.log("dataObj = " + JSON.stringify(dataObj) + " (data type = " + typeof(dataObj) + ")" +
+                    "\nstatus = " + status +
+                    "\njqXHR = " + JSON.stringify(jqXHR));
+    }).fail(function(dataObj, status, jqXHR) {
+        console.log("==================== jqXHR.fail() ====================");
+        console.log("dataObj = " + JSON.stringify(dataObj) + " (data type = " + typeof(dataObj) + ")" +
+                    "\nstatus = " + status +
+                    "\njqXHR = " + JSON.stringify(jqXHR));
+    }).always(function(dataObj, status, jqXHR) {
+        console.log("==================== jqXHR.always() ====================");
+        console.log("dataObj = " + JSON.stringify(dataObj) + " (data type = " + typeof(dataObj) + ")" +
+                    "\nstatus = " + status +
+                    "\njqXHR = " + JSON.stringify(jqXHR));
+    }).then(function(dataObj, status, jqXHR) {
+        console.log("==================== jqXHR.then() ====================");
+        console.log("dataObj = " + JSON.stringify(dataObj) + " (data type = " + typeof(dataObj) + ")" +
+                    "\nstatus = " + status +
+                    "\njqXHR = " + JSON.stringify(jqXHR));
+    });
+    /**
+     * ==================== jqXHR.done() ====================
+     * dataObj = [{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6}] (data type = object)
+     * status = success
+     * jqXHR = {"readyState":4,"responseText":"[{\"id\":\"001\",\"title\":\"Java\",\"price\":10.0},{\"id\":\"002\",\"title\":\"Javascript\",\"price\":9.3},{\"id\":\"003\",\"title\":\"Java EE\",\"price\":15.6}]","responseJSON":[{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6}],"status":200,"statusText":"OK"}
+     * ==================== jqXHR.always() ====================
+     * dataObj = [{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6}] (data type = object)
+     * status = success
+     * jqXHR = {"readyState":4,"responseText":"[{\"id\":\"001\",\"title\":\"Java\",\"price\":10.0},{\"id\":\"002\",\"title\":\"Javascript\",\"price\":9.3},{\"id\":\"003\",\"title\":\"Java EE\",\"price\":15.6}]","responseJSON":[{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6}],"status":200,"statusText":"OK"}
+     * ==================== jqXHR.then() ====================
+     * dataObj = [{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6}] (data type = object)
+     * status = success
+     * jqXHR = {"readyState":4,"responseText":"[{\"id\":\"001\",\"title\":\"Java\",\"price\":10.0},{\"id\":\"002\",\"title\":\"Javascript\",\"price\":9.3},{\"id\":\"003\",\"title\":\"Java EE\",\"price\":15.6}]","responseJSON":[{"id":"001","title":"Java","price":10},{"id":"002","title":"Javascript","price":9.3},{"id":"003","title":"Java EE","price":15.6}],"status":200,"statusText":"OK"}
+     */
+
+
+    // $.when(
+    // ).done(function(result) {
+    // }).done(function(result) {
+    // }).fail(function() {
+    // });
+}
+</script>
+
+</head>
+<body>
+
+    <input type="button" value="Get" onclick="getBook();" />
+    
+    <div id="bookInfo"></div>
+
+</body>
+</html>
