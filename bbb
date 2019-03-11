@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>closure</title>
+
+<script type="text/javascript">
+
+/**
+ * ==== JavaScript. The Definitive Guide, 6th ====
+ * Like most modern programming languages, JavaScript uses lexical scoping.
+ * This means that functions are executed using the variable scope that was in effect when they were defined,
+ *   not the variable scope that is in effect when they are invoked.
+ *
+ * The first step to understanding closures is to review the lexical scoping rules for nested functions.
+ */
+console.log("\n========== JavaScript. The Definitive Guide, 6th ==========");
+let varC11 = "varC11 global scope";
+function funcC11() {
+    let varC11 = "varC11 local scope";
+    function funcC11Inner() {
+        return varC11;
+    }
+    return funcC11Inner();
+}
+console.log("funcC11() -> " + funcC11()); // varC11 local scope
+
+/**
+ * Remember the fundamental rule of lexical scoping:
+ * JavaScript functions are executed using the scope chain that was in effect when they were defined.
+ * The nested function funcC12Inner() was defined under a scope chain in which the variable scope was bound to the value "varC12 local scope".
+ *
+ *   == The Scope Chain ==
+ *   JavaScript is a lexically scoped language.
+ *   The scope of a variable can be thought of as the set of source code lines for which the variable is defined.
+ *   Global variables are defined throughout the program.
+ *   Local variables are defined throughout the function in which they are declared, and also within any functions nested within that function.
+ *
+ *   If we think of local variables as properties of some kind of implementation-defined object,
+ *     then there is another way to think about variable scope.
+ *   Every chunk of JavaScript code (global code or functions) has a scope chain associated with it.
+ *   This scope chain is a list or chain of objects that defines the variables that are "in scope" for that code.
+ *   When JavaScript needs to look up the value of a variable x (a process called variable resolution),
+ *     it starts by looking at the first object in the chain.
+ *   If that object has a property named x, the value of that property is used.
+ *   If the first object does not have a property named x, JavaScript continues the search with the next object in the chain.
+ *   If the second object does not have a property named x, the search moves on to the next object, and so on.
+ *   If x is not a property of any of the objects in the scope chain, then x is not in scope for that code, and a ReferenceError occurs.
+ *
+ *   In top-level JavaScript code (i.e., code not contained within any function definitions),
+ *     the scope chain consists of a single object, the global object.
+ *   In a non-nested function, the scope chain consists of two objects.
+ *   The first is the object that defines the function’s parameters and local variables, and the second is the global object.
+ *   In a nested function, the scope chain has three or more objects.
+ *   It is important to understand how this chain of objects is created.
+ *   When a function is defined, it stores the scope chain then in effect.
+ *   When that function is invoked, it creates a new object to store its local variables, and adds that new object to the stored scope chain
+ *     to create a new, longer, chain that represents the scope for that function invocation.
+ *   This becomes more interesting for nested functions because each time the outer function is called, the inner function is defined again.
+ *   Since the scope chain differs on each invocation of the outer function, the inner function will be subtly different each time it is defined
+ *     the code of the inner function will be identical on each invocation of the outer function, but the scope chain associated with that code will be different.
+ */
+let varC12 = "varC12 global scope";
+function funcC12() {
+    let varC12 = "varC12 local scope";
+    function funcC12Inner() {
+        return varC12;
+    }
+    return funcC12Inner;
+}
+let funcC12Inner = funcC12();
+console.log("funcC12Inner() -> " + funcC12Inner()); // varC12 local scope
+
+function funcC13() {
+    let n = 0;
+    return {
+        count: function() { return n++; },
+        reset: function() { n = 0; }
+    };
+}
+let objC131 = funcC13();
+let objC132 = funcC13();
+console.log("objC131.count() -> " + objC131.count()); // 0
+console.log("objC132.count() -> " + objC132.count()); // 0
+objC131.reset();
+console.log("objC131.count() -> " + objC131.count()); // 0
+console.log("objC132.count() -> " + objC132.count()); // 1
+
+/**
+ * ==== https://eyesofkids.gitbooks.io/javascript-start-from-es6/content/part4/closure.html ====
+ * _內部(Inner)函式被回傳後，除了自己本身的程式碼外，也會捕抓到了環境的變數值，記住執行時的環境
+ *   1. 函式可以像一般的數值使用，可以在變數、物件或陣列中儲存，也可以傳入到另外的函式裡當參數，也可以當回傳值回傳。
+ *   2. 內部函式可以存取外部函式，而形成一個Scope Chain(作用域連鎖)，內部函式可以有三個作用域
+ *     2.1. 自已本身的
+ *     2.2. 外部函式的
+ *     2.3. 全域的
+ *
+ * _閉包會記憶函式建立時的環境，也就是內部函式所能存取得到的作用域連鎖中的所有變數當下的值。
+ * _閉包參考(refer)執行環境的值，而非複製(copy)
+ */
+console.log("\n========== eyesofkids.gitbooks.io ==========");
+const varC21 = 'varC21 global';
+
+function funcC21(outerP){
+    const varC21Outer = 'varC21 outer';
+
+    function funcC21Inner(interP){
+        const varC21Inner = 'varC21 inner';
+        console.log("funcC21Inner() -> varGlobal " + varC21);
+        console.log("funcC21Inner() -> varOuter " + varC21Outer);
+        console.log("funcC21Inner() -> varInner " + varC21Inner);
+        console.log("funcC21Inner() -> paramOuter " + outerP);
+        console.log("funcC21Inner() -> paramInner " + interP);
+    }
+
+    return funcC21Inner;
+}
+const funcC21Inner = funcC21('a');
+funcC21Inner('b');
+// varC21 global
+// varC21 outer
+// varC21 inner
+// a
+// b
+
+/****
+ * _因為閉包記憶的環境值是參考指向的，setTimeout() 的 callback 會先移到工作佇列
+ *   _等它回來主執行緒執行時，i 已經結束迴圈執行，且已變成 3，所以最後執行 print() 都會印出 3
+ ****/
+function funcC221() {
+    let varC221 = 0;
+    for (let i = 0; i < 3; i++) {
+        varC221++;
+        setTimeout(print, 1000);
+    }
+    function print() {
+        console.log("funcC221() -> varC221 = " + varC221);
+    }
+}
+funcC221();
+// 3
+// 3
+// 3
+
+/****  ****/
+function funcC222() {
+    let varC222 = 0;
+    for (let i = 0; i < 3; i++) {
+        varC222++;
+        setTimeout(print(varC222), 1000);
+    }
+    function print(i) {
+        return function() {
+            console.log("funcC222() -> varC222 = " + i);
+        }
+    }
+}
+funcC222();
+// 0
+// 1
+// 2
+
+</script>
+
+</head>
+<body>
+</body>
+</html>
