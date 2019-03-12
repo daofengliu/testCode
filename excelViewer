@@ -1,0 +1,227 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Strict//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>SheetJS excel viewer</title>
+
+<style type="text/css">
+    table {
+        border-collapse: collapse;
+    }
+
+    table, th, td {
+        border: 1px solid;
+    }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+
+<!--
+https://github.com/protobi/js-xlsx
+https://github.com/SheetJS/js-xlsx
+https://docs.sheetjs.com/#sheetjs-js-xlsx
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.14.1/shim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.14.1/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<!-- jQuery UI tabs -->
+<div id="tabs">
+    <ul id="tabsUL"></ul>
+</div>
+
+
+<script type="text/javascript">
+let $_tabs = $("#tabs");
+let $_tabsUL = $("#tabsUL");
+
+/* from origin 'null' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource. */
+// let url = 'https://www.census.gov/retail/mrts/www/data/excel/mrtssales92-present.xls';
+let url = 'http://oss.sheetjs.com/js-xlsx/test_files/formula_stress_test_ajax.xlsx';
+
+/**
+ * https://github.com/SheetJS/js-xlsx#parsing-options
+ */
+let xhr = new XMLHttpRequest();
+xhr.open("GET", url, true);
+xhr.responseType = "arraybuffer";
+xhr.onreadystatechange = function() {
+    // 'use strict';
+    if (xhr.readyState === 4 && xhr.status == 200) {
+        let data = xhr.response;
+        // let wb = XLSX.read(data, {type: 'array'});
+        let wb = XLSX.read(new Uint8Array(data), {"type":'array', "cellStyles":true});
+        toHtml(wb);
+        setSheetTableStyle();
+
+        $_tabs.tabs();
+    }
+};
+xhr.send();
+
+/**
+ * The !rows array in each worksheet, if present, is a collection of RowInfo objects which have the following properties
+ *
+ * let rowInfo = workbook.Sheets[${sheetName}]['!rows'];
+ * rowInfo = {
+ *     ==== visibility ====
+ *     hidden?: boolean; // if true, the row is hidden
+ *
+ *     ==== row height is specified in one of the following ways ====
+ *     hpx?:    number;  // height in screen pixels
+ *     hpt?:    number;  // height in points
+ *
+ *     level?:  number;  // 0-indexed outline / group level
+ * }
+ */
+let rowInfoMap = {};
+
+/**
+ * workbook.SheetNames
+ *   ["Database","Date","Engineering","Finance","Information","Logical","Lookup","Math","Statistical","Text"]
+ *
+ * workbook.Workbook
+ *   {
+ *     "AppVersion": {"appName":"xl","appname":"xl","lastEdited":"5","lastedited":"5","lowestEdited":"5","lowestedited":"5","rupBuild":"23206","rupbuild":"23206"},"WBProps":{"autoCompressPictures":false,"filterPrivacy":true,"showInkAnnotation":false,"allowRefreshQuery":false,"backupFile":false,"checkCompatibility":false,"CodeName":"","date1904":false,"defaultThemeVersion":0,"hidePivotFieldList":false,"promptedSolutions":false,"publishItems":false,"refreshAllConnections":false,"saveExternalLinkValues":true,"showBorderUnselectedTables":true,"showObjects":"all","showPivotChartFilter":false,"updateLinks":"userSet"},
+ *     "WBView": [
+ *       {"xWindow":"11740","xwindow":"11740","yWindow":"80","ywindow":"80","windowWidth":"15420","windowwidth":"15420","windowHeight":"19020","windowheight":"19020","tabRatio":500,"tabratio":"500","firstSheet":1,"firstsheet":"1","activeTab":4,"activetab":"4","autoFilterDateGrouping":true,"minimized":false,"showHorizontalScroll":true,"showSheetTabs":true,"showVerticalScroll":true,"visibility":"visible"}
+ *     ],
+ *     "Sheets": [
+ *       {"name":"Database","sheetId":"8","sheetid":"8","id":"rId1","Hidden":0},
+ *       {"name":"Date","sheetId":"9","sheetid":"9","id":"rId2","Hidden":0},
+ *       {"name":"Engineering","sheetId":"3","sheetid":"3","id":"rId3","Hidden":0},
+ *       {"name":"Finance","sheetId":"2","sheetid":"2","id":"rId4","Hidden":0},
+ *       {"name":"Information","sheetId":"10","sheetid":"10","id":"rId5","Hidden":0},
+ *       {"name":"Logical","sheetId":"4","sheetid":"4","id":"rId6","Hidden":0},
+ *       {"name":"Lookup","sheetId":"7","sheetid":"7","id":"rId7","Hidden":0},
+ *       {"name":"Math","sheetId":"1","sheetid":"1","id":"rId8","Hidden":0},
+ *       {"name":"Statistical","sheetId":"6","sheetid":"6","id":"rId9","Hidden":0},
+ *       {"name":"Text","sheetId":"5","sheetid":"5","id":"rId10","Hidden":0}
+ *     ],
+ *     "CalcPr": {"calcId":"140000","calcid":"140000","concurrentCalc":"0","concurrentcalc":"0","calcCompleted":"true","calcMode":"auto","calcOnSave":"true","fullCalcOnLoad":"false","fullPrecision":"true","iterate":"false","iterateCount":"100","iterateDelta":"0.001","refMode":"A1"},
+ *     "Names":[],
+ *     "xmlns":"http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+ *   }
+ *
+ * workbook.Sheets
+ *   workbook.Sheets[sheetName]
+ *
+ * workbook.Strings
+ *
+ * workbook.Preamble
+ *
+ * workbook.SSF
+ *   {
+ *     "0":"General",
+ *     "2":"0.00",
+ *     "3":"#,##0",
+ *     "8":"\"$\"#,##0.00_);[Red]\\(\"$\"#,##0.00\\)",
+ *     "11":"0.00E+00",
+ *     "12":"# ?/?",
+ *     "13":"# ??/??",
+ *     "14":"m/d/yy",
+ *     "15":"d-mmm-yy",
+ *     "38":"#,##0 ;[Red](#,##0)",
+ *     ...,
+ *     "65535":"General"
+ *   }
+ *
+ * workbook.Metadata
+ *
+ * workbook.opts
+ *
+ * workbook.Props
+ *   {
+ *     "AppVersion": "15.0000",
+ *     "FMTID": ["02d5cdd59c2e1b10939708002b2cf9ae","05d5cdd59c2e1b10939708002b2cf9ae"],
+ *     "Title": "",
+ *     "Application": "Microsoft Excel",
+ *     "DocSecurity": 0,
+ *     "Worksheets": 3,
+ *     "SheetNames": ["MTRF User Guideline","Mask Tooling Request Form","Device 1"],
+ *     ...
+ *   }
+ *
+ * workbook.Custprops
+ */
+function toHtml(workbook) {
+    let sheetAry = workbook.Workbook.Sheets;
+
+    let idx = 0;
+    workbook.SheetNames.forEach(function(sheetName) {
+        let isHiddenSheet = false;
+        for (let i = 0; i < sheetAry.length; i++) {
+            let name = sheetAry[i].name;
+            if (sheetName === name) {
+                let hidden = sheetAry[i].Hidden;
+                isHiddenSheet = (hidden === 1);
+                break;
+            }
+        }
+
+        if (!isHiddenSheet) {
+            console.log("sheetName = " + sheetName);
+            idx++;
+
+            /* html <table> id */
+            let tableId = "sheet_" + idx;
+            /* jQuery tabs id */
+            let tabId = "tab_" + idx;
+            /* put js-xlsx rows info of sheet to object */
+            rowInfoMap[tableId] = workbook.Sheets[sheetName]['!rows'];
+
+            // $_tabsUL.append('<li><a href="#' + sheetName + '">' + sheetName + '</a></li>');
+            $_tabsUL.append('<li><a href="#' + tabId + '">' + sheetName + '</a></li>');
+
+            let _sheetDiv = document.createElement('div');
+            _sheetDiv.setAttribute("id", tabId);
+            try {
+                // var htmlStr = XLSX.write(workbook, {sheet:sheetName, type:'string', bookType:'html'});
+                let option = {"id": tableId, "editable": false};
+                let html = XLSX.utils.sheet_to_html(workbook.Sheets[sheetName], option);
+
+                _sheetDiv.innerHTML = html;
+                $_tabs.append(_sheetDiv);
+            } catch (err) {
+                _sheetDiv.innerHTML = '<span style="color:red;">Parsing excel sheet fail!</span>';
+                $_tabs.append(_sheetDiv);
+                console.log("err = " + err);
+            }
+        }
+    });
+}
+
+/**
+ * SheetJS Pro 版本才支援 style, font, color, .... 等功能
+ *
+ * 1. to remove the hidden rows, or rows no info
+ * 2. set text align if there are td have "colspan" attribute
+ */
+function setSheetTableStyle() {
+    /* 1. */
+    for (let tableId in rowInfoMap) {
+        let rowInfoAry = rowInfoMap[tableId];
+        if (!rowInfoAry) {
+            continue;
+        }
+
+        let $_sheetTable = $("#" + tableId);
+        $_sheetTable.find("tr").each(function(i, elem) {
+            let rowInfo = rowInfoAry[i];
+            console.log("row info = " + JSON.stringify(rowInfo));
+            // if (!rowInfo || rowInfo['hidden']) {
+            //     $(this).remove();
+            // }
+        });
+    }
+
+    /* 2. */
+    $("td[colspan]").css('text-align', 'center');
+}
+</script>
+
+</body>
+</html>
