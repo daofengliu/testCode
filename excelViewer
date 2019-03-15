@@ -1,0 +1,260 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Strict//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>SheetJS/js-xlsx excel viewer</title>
+
+    <style type="text/css">
+        /*
+        td {
+            white-space: nowrap;
+        }
+        */
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+
+    <!--
+    https://docs.sheetjs.com/#sheetjs-js-xlsx
+
+    https://github.com/SheetJS/js-xlsx
+    _wookbook 寫出的 API 較完整
+
+    https://github.com/protobi/js-xlsx
+    _解析 xlsx style 資料較完整，xls style 一樣資料少很多
+
+    ============================================================================
+    _xlsx-style-min.js 為 https://github.com/protobi/js-xlsx 取得的 xlsx.js
+      _把該 js 裡面的 XLSX 改為 XLSX_STYLE，再做 minify
+
+    _xlsx-min.js 為 https://github.com/protobi/js-xlsx 取得的 xlsx.js 再做 minify
+
+    _其它的 .js 則使用 https://github.com/protobi/js-xlsx 取得的 .js
+    ============================================================================
+    -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.14.1/shim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.14.1/cpexcel.js"></script>
+    <script src="./ods.js"></script>
+    <script src="./jszip.js"></script>
+    <script src="./xlsx-style-min.js"></script>
+    <script src="./xlsx-min.js"></script>
+</head>
+<body>
+
+<!-- jQuery UI tabs -->
+<div id="tabs">
+    <ul id="tabsUL"></ul>
+</div>
+
+<script type="text/javascript">
+    (function(window, document, $) {
+        let $_tabs = $("#tabs");
+        let $_tabsUL = $("#tabsUL");
+        let workbook = null;
+        /* sheet 轉為 html 時，該 html 的 <table> 的 id 屬性的 prefix (jQuery tabs 連結該 table 時需要用到 id) */
+        const TABLE_ID_PREFIX = 'sheet_';
+
+        let url = './FXU3AA001A_Mask Tapeout Form.xlsx';
+        let fileNameAry = url.split('.');
+        let isXlsx = false;
+        if (fileNameAry[fileNameAry.length - 1].toLowerCase() === 'xlsx') {
+            isXlsx = true;
+        }
+
+        /* 解析遠端 excel 為 workbook */
+        let xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.responseType = "arraybuffer";
+        xhr.onreadystatechange = function() {
+            // 'use strict';
+            if (xhr.readyState === 4 && xhr.status == 200) {
+                let data = xhr.response;
+                try {
+                    /*
+                     * XLSX_STYLE 在讀取部份 .xls 會發生錯誤
+                     * 也許要改回 https://github.com/protobi/js-xlsx 範例，使用 "type":'array' 的讀取方式
+                     * 目前先判斷改為用 XLSX 來讀取 excel
+                     */
+                    if (isXlsx) {
+                        workbook = XLSX_STYLE.read(new Uint8Array(data), {"type":'array', "cellStyles":true});
+                    } else {
+                        workbook = XLSX.read(new Uint8Array(data), {"type":'array', "cellStyles":true});
+                    }
+                } catch (err) {
+                    console.log("err = " + err);
+                    alert("load excel to workbook fail!");
+                    return;
+                }
+                toHtml(workbook);
+                parseStyle(workbook);
+
+                $_tabs.tabs();
+            }
+        };
+        xhr.send();
+
+
+        function toHtml(workbook) {
+            let idx = 0;
+            workbook.SheetNames.forEach(function(sheetName) {
+                console.log("sheetName = " + sheetName);
+                idx++;
+
+                /* sheet to html 的 <table id=""> */
+                let tableId = TABLE_ID_PREFIX + idx;
+                /* jQuery tabs id */
+                let tabId = "tab_" + idx;
+
+                // $_tabsUL.append('<li><a href="#' + sheetName + '">' + sheetName + '</a></li>');
+                $_tabsUL.append('<li><a href="#' + tabId + '">' + sheetName + '</a></li>');
+
+                let _sheetDiv = document.createElement('div');
+                _sheetDiv.setAttribute("id", tabId);
+                try {
+                    /* XLSX.utils.sheet_to_html() 可以指定轉出的 <table> 的 id 屬性 */
+//                    let html = XLSX.write(workbook, {sheet:sheetName, type:'string', bookType:'html'});
+                    let option = {"id": tableId, "editable": false};
+                    let sheet = workbook.Sheets[sheetName];
+                    let html = XLSX.utils.sheet_to_html(sheet, option);
+
+                    _sheetDiv.innerHTML = html;
+                    $_tabs.append(_sheetDiv);
+                } catch (err) {
+                    _sheetDiv.innerHTML = '<span style="color:red;">Parsing excel sheet fail!</span>';
+                    $_tabs.append(_sheetDiv);
+                    console.log("err = " + err);
+                }
+            });
+        }
+
+        function parseStyle(workbook) {
+            let idx = 0;
+            workbook.SheetNames.forEach(function(sheetName) {
+                idx++;
+                let sheet = workbook.Sheets[sheetName];
+//                console.log(JSON.stringify(sheet));
+
+                let $_sheetTable = $("#" + TABLE_ID_PREFIX + idx);
+                for (let key in sheet) {
+                    if (key[0] === '!' || !sheet[key]['s']) {
+                        continue;
+                    }
+                    let cellStyle = sheet[key]['s'];
+                    let cellValue = sheet[key]['v'];
+                    let css = parseCellStyle(cellStyle, cellValue);
+                    // $_sheetTable.find("td[id='" + key + "']").attr('style', css);
+                    $_sheetTable.find("td[id='sjs-" + key + "']").attr('style', css);
+                }
+            });
+        }
+
+        /*
+         * {
+         *   "s":{
+         *     "numFmt":"General",
+         *     "fill":{
+         *       "patternType":"solid",
+         *       "fgColor":{"rgb":"FFFFFF00"},
+         *       "bgColor":{"indexed":64}
+         *     },
+         *     "font":{
+         *       "bold":true,
+         *    	 "sz":"8",
+         *    	 "color":{"rgb":"FFFF0000"}, // "color":{"theme":"1","rgb":"FFFFFF"}
+         *       "name":"Times New Roman"
+         *     },
+         *     "border":{
+         *       "left":{
+         *    	   "style":"thin",
+         *    	   "color":{"theme":"0","rgb":"000000","tint":"-0.14999847407452621"}
+         *    	 },
+         *    	 "right":{
+         *    	   "style":"thin",
+         *    	   "color":{"theme":"0","rgb":"000000","tint":"-0.14999847407452621"}
+         *    	 },
+         *    	 "top":{
+         *    	   "style":"thin",
+         *    	   "color":{"theme":"0","rgb":"000000","tint":"-0.14999847407452621"}
+         *    	 },
+         *    	 "bottom":{
+         *    	   "style":"thin",
+         *         "color":{"theme":"0","rgb":"000000","tint":"-0.14999847407452621"}
+         *       }
+         *     },
+         *     "alignment":{"vertical":"center","horizontal":"left"}
+         *   }
+         * }
+         *
+         * 1. fill.fgColor.rgb 和 font.color.rgb 有 6 碼 和 8 碼的情況
+         * 2. fill.fgColor 和 font.color 有時有 theme 或 indexed 的 property，然後顏色就可能會解析錯誤
+         *   2.1. 判斷背景色為 '000000' 黑色時，轉為 'FFFFFF' 白色
+         *   2.2. 判斷文字色為 'FFFFFF' 白色時，轉為 '000000' 黑色
+         */
+        function parseCellStyle(style, cellValue) {
+            let css = '';
+            if (style['fill'] && style['fill']['fgColor'] && style['fill']['fgColor']['rgb']) {
+                let color = style['fill']['fgColor']['rgb'];
+                if (color.length > 6) {
+                    color = color.substr(2, 6);
+                }
+                // if (style['fill']['theme'] && color === '000000') {
+                if (color === '000000') {
+                    color = 'FFFFFF';
+                }
+                css += 'background-color:#' + color + ";";
+            }
+            /* cell 無值，則只解析背景色 */
+            if (!cellValue) {
+                return css;
+            }
+
+            if (style['font']) {
+                if (style['font']['color'] && style['font']['color']['rgb']) {
+                    let color = style['font']['color']['rgb'];
+                    if (color.length > 6) {
+                        color = color.substr(2, 6);
+                    }
+                    // if (style['font']['theme'] && color === 'FFFFFF') {
+                    if (color === 'FFFFFF') {
+                        color = '000000';
+                    }
+                    css += 'color:#' + color + ";";
+                }
+                if (style['font']['sz']) {
+                    css += 'font-size:' + style['font']['sz'] + "px;";
+                }
+                if (style['font']['bold']) {
+                    css += 'font-weight:bold;';
+                }
+            }
+            if (style['alignment']) {
+                if (style['alignment']['horizontal']) {
+                    css += 'text-align:' + style['alignment']['horizontal'] + ";";
+                }
+                if (style['alignment']['vertical']) {
+                    css += 'vertical-align:' + style['alignment']['vertical'] + ";";
+                }
+            }
+            if (style['border']) {
+                if (style['border']['left']) {
+                    css += 'border-left-style:' + style['border']['left']['style'] + ";";
+                }
+                if (style['border']['right']) {
+                    css += 'border-right-style:' + style['border']['right']['style'] + ";";
+                }
+                if (style['border']['top']) {
+                    css += 'border-top-style:' + style['border']['top']['style'] + ";";
+                }
+                if (style['border']['bottom']) {
+                    css += 'border-bottom-style:' + style['border']['bottom']['style'] + ";";
+                }
+            }
+            return css;
+        }
+    })(window, document, window.jQuery);
+</script>
+
+</body>
+</html>
