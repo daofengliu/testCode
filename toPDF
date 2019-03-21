@@ -1,0 +1,202 @@
+package idv.util.excel;
+
+import com.artofsolving.jodconverter.DocumentConverter;
+import com.artofsolving.jodconverter.openoffice.connection.OpenOfficeConnection;
+import com.artofsolving.jodconverter.openoffice.connection.SocketOpenOfficeConnection;
+import com.artofsolving.jodconverter.openoffice.converter.OpenOfficeDocumentConverter;
+
+import java.io.File;
+
+public class ToPDF {
+
+    public static void main(String[] args) {
+        new ToPDF().jodConverter();
+    }
+
+    /**
+     * https://angelozerr.wordpress.com/2012/12/06/how-to-convert-docxodt-to-pdfhtml-with-java/
+     * http://thexfile0515.blogspot.com/2012/04/jodconverter-microsoft-office-pdf.html
+     * http://zhi-bin1985.blogspot.com/2015/05/java-jodconverterxls-to-ods.html
+     * https://www.itread01.com/content/1544345223.html
+     *
+     * ==== 1. java library ====
+     * download jodconverter-2.2.2.zip
+     *
+     * ==== 2. start LibreOffice service ====
+     * cd ${install}/libreoffice${version}/program/
+     * (cd /opt/libreoffice4.3/program/)
+     * soffice -headless -accept="socket,host=127.0.0.1,port=8100;urp;" -nofirststartwizard
+     *
+     * ==== 3. execution ====
+     * java -cp .:./lib/jodconverter-2.2.2.jar:./lib/commons-io-1.4.jar:./lib/juh-3.0.1.jar:./lib/jurt-3.0.1.jar:./lib/ridl-3.0.1.jar:./lib/unoil-3.0.1.jar:./lib/xstream-1.3.1.jar:./lib/slf4j-api-1.5.6.jar:./lib/slf4j-jdk14-1.5.6.jar idv.ToPDF
+     *
+     * Java 6 or later, the classpath option supports wildcards
+     *   a. use straight quotes (")
+     *   b. use *, not *.jar
+     *
+     * windows:
+     *   java -cp ".;./lib/*" idv.util.excel.ToPDF
+     * linus:
+     *   java -cp ".:./lib/*" idv.util.excel.ToPDF
+     */
+    private void jodConverter() {
+        File inputFile = new File("./test.xlsx");
+        File outputFile = new File("./test.pdf");
+
+        /* connect to an OpenOffice.org instance running on port 8100 */
+        OpenOfficeConnection conn = new SocketOpenOfficeConnection(8100);
+        try {
+            conn.connect();
+            DocumentConverter converter = new OpenOfficeDocumentConverter(conn);
+            converter.convert(inputFile, outputFile);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.disconnect();
+                }
+            } catch (Exception ex) {
+                throw ex;
+            }
+        }
+    }
+
+    /**
+     * http://danadler.com/jacob/
+     * https://sourceforge.net/projects/jacob-project/
+     * https://www.itread01.com/content/1544345223.html
+     *
+     * 1. download jacob-1.19.zip
+     * 2. copy jacob-1.19-x86.dll to ${java_install}/bin
+     */
+//    private void jacob() {
+//        final int WORD_FORMAT_PDF = 17;
+//        final int EXCEL_FORMAT_PDF = 0;
+//        final int PPT_FORMAT_PDF = 32;
+//
+//        String inputFile = "./text.xlsx";
+//        String pdfFile = "./text.pdf";
+//
+//        System.out.println("-> start Excel");
+//        long start = System.currentTimeMillis();
+//        ActiveXComponent app = null;
+//        Dispatch excel = null;
+//        try {
+//            app = new ActiveXComponent("Excel.Application");
+//            app.setProperty("Visible", new Variant(false));
+//            Dispatch excels = app.getProperty("Workbooks").toDispatch();
+//            excel = Dispatch.call(excels, "Open", inputFile).toDispatch();
+//            System.out.println("-> open document: " + inputFile);
+//            System.out.println("-> transfer to PDF: " + pdfFile);
+//            File tofile = new File(pdfFile);
+//            if (tofile.exists()) {
+//                tofile.delete();
+//            }
+//
+//            Dispatch.call(excel, "ExportAsFixedFormat", EXCEL_FORMAT_PDF, pdfFile);
+//            long end = System.currentTimeMillis();
+//            System.out.println("-> transfer down, cost：" + (end - start) + "ms.");
+//        } catch (Exception ex) {
+//            System.out.println("-> transfer fail: " + ex.getMessage());
+//        } finally {
+//            Dispatch.call(excel, "Close", false);
+//            System.out.println("-> close document");
+//            if (app != null) {
+//                app.invoke("Quit", new Variant[]{});
+//            }
+//        }
+//        ComThread.Release();
+//    }
+
+    /**
+     * ==== using Excel VBA ====
+     * https://exceloffthegrid.com/vba-code-save-excel-file-as-pdf/
+     *
+     * Private Sub Workbook_Open()
+     *   ' 自動調整列高
+     *   Dim ws As Worksheet
+     *   For Each ws In ActiveWorkbook.Worksheets
+     *       Worksheets(ws.Name).Activate
+     *   	Dim rowCnt As Integer
+     *       rowCnt = Worksheets(ws.Name).UsedRange.Rows.Count
+     *   	Dim range As String
+     *       range = "A1:A" & rowCnt
+     *   '    Worksheets(ws.Name).range(range).Columns.AutoFit
+     *   	Worksheets(ws.Name).range(range).EntireRow.AutoFit
+     *   Next
+     *
+     *   ' 輸出 PDF
+     *   Dim fileName as String
+     *   fileName = ThisWorkbook.Name
+     *   ActiveWorkbook.ExportAsFixedFormat _
+     *           Type:=xlTypePDF, _
+     *           IgnorePrintAreas:=True, _
+     *           Filename:="D:\tmp\" & fileName, _
+     *           Quality:=xlQualityStandard
+     *
+     *   ' 結束程式
+     *   Application.Quit
+     * End Sub
+     */
+
+}
+
+
+
+
+vncserver (執行 vncserver，使用 VNC Viewer 才能連線)
+
+ VNC Server: ftcosdev1:1
+
+ vncserver -kill :1
+ 
+ 
+ 
+ 
+ 
+ ===========================================================================
+ *   2.2.6. The arrow function expression (=>)
+ *   https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions
+ *   ===========================================================================
+ *   An arrow function expression has a shorter syntax than a function expression
+ *     and does not bind its own "this", arguments, super, or new.target.
+ *   Arrow functions are always anonymous.
+ *   These function expressions are best suited for non-method functions, and they cannot be used as constructors.
+ *   _"箭頭函式運算式" 有比 "函式運算式" 還簡短的語法，它沒有自己的 this, arguments, super, new.target 等語法
+ *   _箭頭函式都是匿名函式
+ *   
+ *   == Basic Syntax ==
+ *   1.
+ *       (p1, p2, …, pN) => { statements... }
+ *   
+ *   2. 沒有使用 {} 時，會自動加 return
+ *       (p1, p2, …, pN) => expression
+ *       (p1, p2, …, pN) => { return expression; }
+ *   
+ *   3. Parentheses are optional when there's only one parameter name:
+ *      _只有一個參數時，可不加括號
+ *       (p1) => { statements... }
+ *       p1 => { statements... }
+ *   
+ *   4. The parameter list for a function with no parameters should be written with a pair of parentheses.
+ *      _無參數則一定要加括號
+ *       () => { statements... }
+ *   
+ *   5.
+ *       () => expression
+ *       () => { return expression; }
+ *   
+ *   ps. x => x = 1 和 x => { x + 1 } 是不一樣的，前者有 return, 後者無 return (呼叫後者因為無 return, 會得到 undefined)
+ *
+ *   == Advanced Syntax ==
+ *   1. Parenthesize the body of function to return an object literal expression:
+ *       params => ({foo: bar})
+ *   
+ *   2. Rest parameters and default parameters are supported
+ *       (p1, p2, ...rest) => { statements... }
+ *       (p1 = defaultValue1, p2, …, pN = defaultValueN) => { statements... }
+ *   
+ *   3. Destructuring within the parameter list is also supported
+ *     var f = ([a, b] = [1, 2], {x: c} = {x: a + b}) => a + b + c;
+ *     f(); // 6
