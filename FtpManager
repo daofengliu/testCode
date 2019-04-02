@@ -1,0 +1,406 @@
+package idv.util.net.ftp.apache.commons;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.net.ftp.FTP;
+import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPFile;
+import org.apache.commons.net.ftp.FTPReply;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+
+/**
+ * ==== 基本觀念 ====
+ * 使用 FTP 傳輸時，至少會使用到兩個 Port 來建立連線通道：
+ *   一個為指令通道(Command Channel)，預設使用 Port 21 建立連線，用來傳輸 FTP 指令，例如：列出檔案清單(LIST)、變更目錄(CWD)、取得目前的目錄(PWD)、......等。
+ *   另一個為資料通道(DATA Channel)，預設使用 Port 20，但是會因 FTP Client 選擇使用的「連線模式」不同而有所不同。
+ *
+ * FTP Client (e.g. FileZilla) 每次建立連線時都會下 PORT 或 PASV 指令
+ * 而每次下指令傳輸資料時，都會建立一次 data connection，包括取得遠端的檔案清單(LIST)時回傳的檔案列表、下載檔案、或上傳檔案。
+ *
+ * ==== 連線模式 ====
+ * FTP 的連線模式分兩種：主動模式 (Active mode) 與 被動模式 (Passive mode)
+ *
+ * == 主動模式 (Active mode) ==
+ * FTP Client 跟 FTP Server 連線後，會主動利用 PORT 指令提出 DATA Channel 連線的要求，如下：
+ *   指令: PORT 10,18,53,171,17,114
+ *   回應: 200 Port command successful.
+ *
+ * 這裡的 PORT 指令是由 FTP Client 送出的，當需要建立 DATA Channel 時，FTP Server 會主動利用 Server 主機的 Port 20 發出連線到 FTP Client 的主機，而 PORT 指令後的參數說明如下：
+ *   前四個數字是 FTP Client 的 IP 位址：10.18.53.171
+ *   後兩個數字是 FTP Client 接受連線的 Port 埠號，埠號的計算方式是 (第五個數字 * 256 + 第六個數字)，以此範例來說，FTP Client 接受的連線埠號是 17 * 256 + 114 = 4,466
+ *
+ * 由此可知，如果 FTP Client 處於 NAT 的環境下的話，FTP Server 幾乎無法正常的連線到 FTP Client 的主機，所以現在大部分的連線模式幾乎都建議使用者使用被動模式(Passive mode)。
+ * ps. 是因為總共只有 4466 ports，扣掉預設和其它 application 後所剩無己的關係？
+ *
+ * == 被動模式 (Passive mode) ==
+ * FTP Client 跟 FTP Server 連線後，會主動利用 PASV 指令提出 DATA Channel 連線的要求，如下：
+ *   指令: PASV
+ *   回應: 227 Entering Passive Mode (59,37,124,43,158,251)
+ *
+ * 可以看到由 FTP Client 送出的 PASV 指令並沒有送出其他的參數，而是在 FTP Server 回應的時候出現了 (59,37,124,43,158,251) 字串
+ * 當需要建立 DATA Channel 時，這時就會由 FTP Client 主動連接至 FTP Server 動態開放的 Port 供 FTP Client 連接，其中 (59,37,124,43,158,251) 的說明如下：
+ *   前四個數字是 FTP Server 的 IP 位址：59.37.124.43
+ *   後兩個數字是 FTP Server 接受連線的 Port 埠號，埠號的計算方式是 (第五個數字 * 256 + 第六個數字)，以此範例來說，FTP Server 可接受的連線埠號是 158 * 256 + 251 = 40,699
+ *
+ * 由此可知，使用被動模式(Passive mode)對 FTP Server 的系統管理員來說，可掌控的部分是比較多的，因為 FTP Server 無法決定使用者是否可使用主動模式連線，但若改使用被動模式連線的話，就幾乎能讓所有人正常的使用 FTP 服務
+ * ps. 所以在 upload 時，會設定 ftpClient.enterLocalPassiveMode();
+ */
+public class FtpManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FtpManager.class);
+
+    private static final boolean TO_SHOW_FTP_REPLY = true;
+
+    /**
+     * The default settings for FTPClient are for it to use
+     *   FTP.ASCII_FILE_TYPE,
+     *   FTP.NON_PRINT_TEXT_FORMAT,
+     *   FTP.STREAM_TRANSFER_MODE,
+     *   FTP.FILE_STRUCTURE
+     *
+     * The only file types directly supported are
+     *   FTP.ASCII_FILE_TYPE and FTP.BINARY_FILE_TYPE.
+     *
+     * FTP.NON_PRINT_TEXT_FORMAT, FTP.STREAM_TRANSFER_MODE, and FTP.FILE_STRUCTURE
+     *   are the only supported formats, transfer modes, and file structures.
+     *
+     *   FTPClientConfig config = new FTPClientConfig();
+     *   config.setDefaultDateFormatStr(defaultDateFormatStr);
+     *   config.setLenientFutureDates(lenientFutureDates);
+     *   config.setRecentDateFormatStr(recentDateFormatStr);
+     *   config.setServerLanguageCode(serverLanguageCode);
+     *   config.setServerTimeZoneId(serverTimeZoneId);
+     *   config.setShortMonthNames(shortMonthNames);
+     *
+     *   ftpClient = new FTPClient();
+     *   ftpClient.configure(config);
+     *   ftpClient.setControlKeepAliveTimeout(300);
+     *   ftpClient.setAutodetectUTF8(true);
+     *   ftpClient.setBufferSize(1024 * 8);
+     */
+    private FTPClient ftpClient = new FTPClient();
+
+    /* Spring 非 Constructor DI 時... */
+//    private FTPClient ftpClient;
+//    public FtpManager() {
+//        ftpClient = new FTPClient();
+//    }
+
+    public static class FTPInfo {
+        String host;
+        int port;
+        String account;
+        String passwd;
+
+        private FTPInfo(String host, int port, String account, String passwd) {
+            this.host = host;
+            this.port = port;
+            this.account = account;
+            this.passwd = passwd;
+        }
+    }
+
+    public static FTPInfo getFTPInfo(String host, int port, String account, String passwd) {
+        return new FTPInfo(host, port, account, passwd);
+    }
+
+    /**
+     * retrieveFile(String remote, OutputStream local)
+     *
+     * Retrieves a named file from the server and writes it to the given OutputStream.
+     * This method does NOT close the given OutputStream.
+     * If the current file type is ASCII, line separators in the file are converted to the local representation.
+     *
+     *   ftpClient.setFileType(FTP.ASCII_FILE_TYPE);
+     *   ftpClient.setFileType(FTP.EBCDIC_FILE_TYPE);
+     *   ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+     *   ftpClient.setFileType(FTP.LOCAL_FILE_TYPE);
+     *   ftpClient.setFileType(FTP.${xxx}_TYPE, FTP.NON_PRINT_TEXT_FORMAT);
+     *   ftpClient.setFileType(FTP.${xxx}_TYPE, FTP.TELNET_TEXT_FORMAT);
+     *   ftpClient.setFileType(FTP.${xxx}_TYPE, FTP.CARRIAGE_CONTROL_TEXT_FORMAT);
+     *
+     *   ftpClient.setFileStructure(FTP.FILE_STRUCTURE)
+     *   ftpClient.setFileStructure(FTP.RECORD_STRUCTURE)
+     *   ftpClient.setFileStructure(FTP.PAGE_STRUCTURE)
+     */
+//    public void downloadFile(FTPInfo ftpInfo, String from, String fileName, String to) throws IOException {
+//        LOGGER.info("download " + fileName + " from " + from + " to " + to);
+//
+//        login(ftpInfo.host, ftpInfo.port, ftpInfo.account, ftpInfo.passwd);
+//
+//        OutputStream os = null;
+//        try {
+//            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+//            os = new BufferedOutputStream(new FileOutputStream(new File(to)));
+//            ftpClient.retrieveFile(from + fileName, os);
+//            showServerReply(ftpClient);
+//        } catch (IOException ex) {
+//            LOGGER.error("downlaod " + fileName + " fail", ex);
+//            throw ex;
+//        } finally {
+//            IOUtils.closeQuietly(os);
+//        }
+//
+//        logout();
+//    }
+    public void downloadFiles(FTPInfo ftpInfo, String from, String[] fileNames, String to) throws IOException {
+        LOGGER.info("download " + StringUtils.join(fileNames, ",") + " from " + from + " to " + to);
+
+        login(ftpInfo.host, ftpInfo.port, ftpInfo.account, ftpInfo.passwd);
+
+        OutputStream os = null;
+        try {
+            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+        } catch (IOException ex) {
+            LOGGER.error(ex.getMessage(), ex);
+            throw ex;
+        }
+        for (String fileName : fileNames) {
+            try {
+                os = new BufferedOutputStream(new FileOutputStream(new File(to)));
+                ftpClient.retrieveFile(from + fileName, os);
+                showServerReply(ftpClient);
+            } catch (IOException ex) {
+                LOGGER.error("download " + fileName + " fail", ex);
+                throw ex;
+            } finally {
+                IOUtils.closeQuietly(os);
+            }
+        }
+
+        logout();
+    }
+
+    /**
+     * The proper steps to upload a file
+     * 1. Connect and login to the server.
+     * 2. Enter local passive mode for data connection.
+     * 3. Set file type to be transferred to binary.
+     * 4. Create an InputStream for the local file.
+     * 5. Construct path of the remote file on the server.
+     *    The path can be absolute or relative to the current working directory.
+     * 6. Call one of the storeXXX()methods to begin file transfer.
+     *    There are two scenarios:
+     *      a. Using an InputStream-based approach: this is the simplest way, since we let the system does the ins and outs.
+     *         There is no additional code, just passing the InputStream object into the appropriate method,
+     *           such as storeFile(String remote, InputStream local) method.
+     *
+     *      b. Using an OutputStream-based approach: this is more complex way, but more control.
+     *         Typically we have to write some code that reads bytes from the InputStream of the local file
+     *           and writes those bytes into the OutputStream which is returned by the storeXXX() method, such as storeFileStream(String remote) method.
+     *
+     * 7. Close the opened InputStream and OutputStream.
+     * 8. Call completePendingCommand() method to complete transaction.
+     * 9. Logout and disconnect from the server.
+     *
+     *  ftpClient.setFileTransferMode(FTP.STREAM_TRANSFER_MODE);
+     *  ftpClient.setFileTransferMode(FTP.BLOCK_TRANSFER_MODE);
+     *  ftpClient.setFileTransferMode(FTP.COMPRESSED_TRANSFER_MODE);
+     */
+//    public void uploadFile(FTPInfo ftpInfo, String from, String fileName, String to) throws IOException {
+//        LOGGER.info("upload " + fileName + " from " + from + " to " + to);
+//
+//        login(ftpInfo.host, ftpInfo.port, ftpInfo.account, ftpInfo.passwd);
+//
+//        try {
+//            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+//            ftpClient.setFileTransferMode(FTP.STREAM_TRANSFER_MODE);
+//            ftpClient.enterLocalPassiveMode();
+////            ftpClient.setControlEncoding("UTF-8");
+//        } catch (IOException ex) {
+//            LOGGER.error("set FTPClient uploading parameter fail", ex);
+//            throw ex;
+//        }
+//
+//        BufferedInputStream in = null;
+//        try {
+//            in = new BufferedInputStream(new FileInputStream(new File(from, fileName)));
+////            isUpload = ftpClient.storeFile(to + fileName, in);
+//            ftpClient.changeWorkingDirectory(to);
+//            ftpClient.storeFile(fileName, in);
+//            showServerReply(ftpClient);
+//        } catch (IOException ex) {
+//            LOGGER.error("upload " + fileName + " fail", ex);
+//            throw ex;
+//        } finally {
+//            IOUtils.closeQuietly(in);
+//        }
+//
+//        logout();
+//    }
+    public void uploadFiles(FTPInfo ftpInfo, String from, String[] fileNames, String to) throws IOException {
+        LOGGER.info("upload " + StringUtils.join(fileNames, ",") + " from " + from + " to " + to);
+
+        login(ftpInfo.host, ftpInfo.port, ftpInfo.account, ftpInfo.passwd);
+
+        try {
+            ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
+            ftpClient.setFileTransferMode(FTP.BINARY_FILE_TYPE);
+            ftpClient.enterLocalPassiveMode();
+//            ftpClient.setControlEncoding("UTF-8");
+        } catch (IOException ex) {
+            LOGGER.error("set FTPClient uploading parameter fail", ex);
+            throw ex;
+        }
+
+        BufferedInputStream in = null;
+        for (String fileName : fileNames) {
+            try {
+                in = new BufferedInputStream(new FileInputStream(new File(from, fileName)));
+                ftpClient.changeWorkingDirectory(to);
+                ftpClient.storeFile(fileName, in);
+                showServerReply(ftpClient);
+            } catch (IOException ex) {
+                LOGGER.error("upload " + fileName + " fail", ex);
+                throw ex;
+            } finally {
+                IOUtils.closeQuietly(in);
+            }
+        }
+
+        logout();
+    }
+
+
+    private void login(String host, int port, String account, String passwd) throws IOException {
+        LOGGER.info("FTP -> to login, host = " + host + ", port = " + port + ", account = " + account);
+        try {
+            ftpClient.connect(host, port);
+        } catch (IOException ex) {
+            LOGGER.error("connect to FTP fail", ex.getMessage());
+            throw ex;
+        }
+        showServerReply(ftpClient);
+
+        int replyCode = ftpClient.getReplyCode();
+        if (!FTPReply.isPositiveCompletion(replyCode)) {
+            logout();
+
+            String msg = "FTP server refused connection, reply code: " + replyCode;
+            LOGGER.info(msg);
+            throw new IOException(msg);
+        }
+
+        boolean isSuccess = false;
+        try {
+            isSuccess = ftpClient.login(account, passwd);
+        } catch (IOException ex) {
+            LOGGER.error("login FTP fail", ex.getMessage());
+            throw ex;
+        }
+        showServerReply(ftpClient);
+
+        if (!isSuccess) {
+            String msg = "login FTP fail";
+            LOGGER.info(msg);
+            throw new IOException(msg);
+        }
+        LOGGER.info("login FTP success");
+    }
+
+    private void logout() throws IOException {
+        LOGGER.info("FTP -> to logout");
+        try {
+            ftpClient.logout();
+            showServerReply(ftpClient);
+        } catch (IOException ex) {
+            String msg = "logout FTP fail";
+            LOGGER.info(msg, ex);
+            throw ex;
+        } finally {
+            if (ftpClient.isConnected()) {
+                try {
+                    ftpClient.disconnect();
+                } catch (IOException ioex) {
+                    String msg = "disconnect FTP fail";
+                    LOGGER.info(msg, ioex);
+                    throw ioex;
+                }
+                showServerReply(ftpClient);
+            }
+        }
+    }
+
+    private FTPFile[] listFiles(String path) throws IOException {
+        LOGGER.info("FTP -> get files from " + path);
+        FTPFile[] files = null;
+        try {
+            files = ftpClient.listFiles(path);
+            showServerReply(ftpClient);
+        } catch (IOException ex) {
+            String msg = "list ftp files from " + path + " fail";
+            LOGGER.error(msg, ex);
+            throw ex;
+        }
+        return files;
+    }
+
+    /** TODO: 未執行 completePendingCommand() 會發生錯誤 */
+    private InputStream getFtpFileStream(String path, String fileName) throws IOException {
+        String filePath = path + fileName;
+        LOGGER.info("FTP -> get file stream = " + filePath);
+        try {
+            InputStream input = ftpClient.retrieveFileStream(filePath);
+            boolean isComplete = ftpClient.completePendingCommand();
+//            return input;
+            if (isComplete) {
+                return input;
+            }
+            return null;
+        } catch (IOException ex) {
+            LOGGER.error("load file( " + filePath + ") input strem fail", ex);
+            throw ex;
+        }
+    }
+
+    private void moveFile(String from, String fileName, String to) throws IOException {
+        LOGGER.info("FTP -> move " + fileName + " from " + from + " to " + to + fileName);
+        try {
+            ftpClient.rename(from + fileName, to + fileName);
+            showServerReply(ftpClient);
+        } catch (IOException ex) {
+            LOGGER.error("move " + fileName + " fail", ex);
+            throw ex;
+        }
+    }
+
+    private void removeFile(String path, String fileName) throws IOException {
+        LOGGER.info("FTP -> remove " + fileName + " from " + path);
+        try {
+            ftpClient.deleteFile(path + fileName);
+            showServerReply(ftpClient);
+        } catch (IOException ex) {
+            LOGGER.error("remove " + fileName + " fail", ex);
+            throw ex;
+        }
+    }
+
+    private static void showServerReply(FTPClient ftpClient) {
+        if (!TO_SHOW_FTP_REPLY) {
+            return;
+        }
+        String[] replies = ftpClient.getReplyStrings();
+        if (replies != null && replies.length > 0) {
+            for (String aReply : replies) {
+                LOGGER.info("SERVER: " + aReply);
+            }
+        }
+    }
+
+
+    /** test */
+    public static void main(String[] args) throws IOException {
+        final String FTP_HOST = "ftp_test";
+        final int FTP_PORT = 21;
+        final String FTP_ACCOUNT = "test";
+        final String FTP_PASSWD = "test";
+
+        FtpManager ftp = new FtpManager();
+        FTPInfo ftpInfo = FtpManager.getFTPInfo(FTP_HOST, FTP_PORT, FTP_ACCOUNT, FTP_PASSWD);
+//        ftp.downloadFiles(ftpInfo, "/test/", new String[] {"test.xml"}, "D:\\test");
+        ftp.uploadFiles(ftpInfo, "D:\\test", new String[] {"test.xml"}, "/test/");
+    }
+
+}
