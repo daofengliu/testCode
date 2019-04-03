@@ -1,0 +1,736 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>idv.myjava</groupId>
+    <artifactId>orangec-parent</artifactId>
+    <version>1.0</version>
+    <packaging>pom</packaging>
+    <description>orangec parent project</description>
+   
+    <modules>
+        <module>orangec-jar</module>
+        <module>orangec-web</module>
+        <module>orangec-ejb</module>
+        <module>orangec-client</module>
+        <module>orangec-ear</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.6.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+
+            <!-- source plugin -->
+            <!--
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            -->
+        </plugins>
+    </build>
+</project>
+
+<!--
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>3.1.1</version>
+            <goals></goals>
+            <configuration>
+                <finalName></finalName>
+                <archive></archive>
+                <outputDirectory></outputDirectory>
+                <classesDirectory></classesDirectory>
+                <testClassesDirectory></testClassesDirectory>
+                <classifier></classifier>
+                <includes>
+                    <include></include>
+                </includes>
+                <excludes>
+                    <exclude></exclude>
+                </excludes>
+                <goal></goal>
+                <detail></detail>
+                <skip></skip>
+                <skipIfEmpty></skipIfEmpty>
+            </configuration>
+            <dependencies>
+                <dependency>
+                    <groupId></groupId>
+                    <artifactId></artifactId>
+                    <scope></scope>
+                    <exclusions>
+                        <exclusion></exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+            <executions>
+                <execution>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>jar</goal>
+                    </goals>
+                    <configuration>
+                        <finalName></finalName>
+                        <outputDirectory></outputDirectory>
+                        <classesDirectory></classesDirectory>
+                        <classifier></classifier>
+                        <includes>
+                            <include></include>
+                        </includes>
+                        <excludes>
+                            <exclude></exclude>
+                        </excludes>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+-->
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>idv.myjava</groupId>
+        <artifactId>orangec-parent</artifactId>
+        <version>1.0</version>
+    </parent>
+   
+    <groupId>idv.myjava</groupId>
+    <artifactId>orangec-jar</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+    <description>orangec my Jave module</description>
+   
+    <properties>
+        <jdk.version>1.8</jdk.version>
+        <slf4j.version>1.7.25</slf4j.version>
+        <log4j.version>1.2.17</log4j.version>
+<!--         <log4j2.version>2.10.0</log4j2.version> -->
+        <orangec.version>1.0</orangec.version>
+    </properties>
+   
+    <dependencies>
+        <!-- log4j 2.x -->
+<!--        <dependency> -->   
+<!--            <groupId>org.apache.logging.log4j</groupId> -->
+<!--            <artifactId>log4j-api</artifactId> -->
+<!--            <version>${log4j2.version}</version> -->
+<!--        </dependency> -->
+<!--        <dependency> -->
+<!--            <groupId>org.apache.logging.log4j</groupId> -->
+<!--            <artifactId>log4j-core</artifactId> -->
+<!--            <version>${log4j2.version}</version> -->
+<!--        </dependency> -->
+        <!-- log4j 1.x -->
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>apache-log4j-extras</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+        <!-- 有些 framework 的 log 使用 slf4j，所以若要 trace code 還是需要 slf4j -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <!-- apache commons -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.7</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.1</version>
+            </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.6</version>
+        </dependency>
+        <!-- MySQL JDBC JDBC driver -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <!-- <version>5.1.45</version> -->
+            <version>6.0.6</version>
+        </dependency>
+        <!-- hsqldb -->
+        <dependency>
+            <groupId>org.hsqldb</groupId>
+            <artifactId>hsqldb</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <!--
+        <dependency>
+            <groupId>commons-dbcp</groupId>
+            <artifactId>commons-dbcp</artifactId>
+            <version>1.4</version>
+        </dependency>
+        -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-dbcp2</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+        <!-- DB connection pool -->
+        <dependency>
+            <groupId>c3p0</groupId>
+            <artifactId>c3p0</artifactId>
+            <version>0.9.1.2</version>
+        </dependency>
+        <!-- JSON -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.8.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>2.25</version>
+        </dependency>
+    </dependencies>
+   
+    <build>
+        <!--<finalName>orangec</finalName>-->
+        <plugins>
+            <!-- jar plugin
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId> 
+                <artifactId>maven-jar-plugin</artifactId> 
+                <version>3.1.1</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <classifier>client</classifier>
+                            <includes>
+                                <include>**/service/*</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            -->
+        </plugins>
+    </build>
+</project>
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>idv.myjava</groupId>
+        <artifactId>orangec-parent</artifactId>
+        <version>1.0</version>
+    </parent>
+    
+    <groupId>idv.myjava</groupId>
+    <artifactId>orangec-web</artifactId>
+    <version>1.0</version>
+    <packaging>war</packaging>
+    <description>orangec Java web module</description>
+    
+    <properties>
+        <jdk.version>1.8</jdk.version>
+        <orangec.version>1.0</orangec.version>
+        <spring.version>5.0.3.RELEASE</spring.version>
+        <aspectj.version>1.8.10</aspectj.version>
+        <jackson.version>2.9.8</jackson.version>
+    </properties>
+    
+    <!--
+    <repositories>
+        <repository>
+            <id>java.net2</id>
+            <name>Repository hosting the jee6 artifacts</name>
+            <url>http://download.java.net/maven/2</url>
+        </repository>
+    </repositories>
+    -->
+    
+    <dependencies>
+        <!-- spring framework -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>${spring.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-orm</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+        <!-- AspectJ (for Spring AOP) -->
+        <dependency>
+           <groupId>org.aspectj</groupId>
+           <artifactId>aspectjrt</artifactId>
+           <version>${aspectj.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>${aspectj.version}</version>
+        </dependency>
+        <!-- Servlet -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>4.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet.jsp</groupId>
+            <artifactId>javax.servlet.jsp-api</artifactId>
+            <version>2.3.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.el</groupId>
+            <artifactId>javax.el-api</artifactId>
+            <version>3.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>jstl</groupId>
+            <artifactId>jstl</artifactId>
+            <version>1.2</version>
+            <!-- <scope>provided</scope> -->
+        </dependency>
+        <dependency>
+            <groupId>taglibs</groupId>
+            <artifactId>standard</artifactId>
+            <version>1.1.2</version>
+            <scope>compile</scope>
+        </dependency>
+        <!-- 
+          Java EE (6.0 for EJB 3.1, JPA 2.0... 7.0 for EJB 3.2, JPA 2.1... )
+          
+　　　　　　　跑JPA時發生以下exception
+            Caused by: java.lang.ClassFormatError: Absent Code attribute in method that is 
+                         not native or abstract in class file javax/persistence/GenerationType
+          
+          The good practice is always get the original full version of javaee.jar file from the http://java.sun.com/javaee/.
+          Just download and install the J2EE SDK, and the javaee.jar can be found in the “\J2EE_SDK_FOLDER\lib” folder.
+          Include it into your local Maven repository or poject classpath will get rid of the above error message.
+        -->
+<!--        <dependency> -->
+<!--            <groupId>javax</groupId> -->
+<!--            <artifactId>javaee-api</artifactId> -->
+<!--            <version>6.0</version> -->
+<!--        </dependency> -->
+
+        <!-- @see orangec-jar POM 
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.40</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hsqldb</groupId>
+            <artifactId>hsqldb</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-dbcp</groupId>
+            <artifactId>commons-dbcp</artifactId>
+            <version>1.4</version>
+        </dependency>
+        <dependency>
+            <groupId>c3p0</groupId>
+            <artifactId>c3p0</artifactId>
+            <version>0.9.1.2</version>
+        </dependency>
+        -->
+
+        <!-- web service by JAX-RS using jersey -->
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet</artifactId>
+            <version>2.25</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>2.25</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+            <scope>compile</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>idv.myjava</groupId>
+            <artifactId>orangec-jar</artifactId>
+            <version>${orangec.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <!--<finalName>orangec-web</finalName>-->
+        <plugins>
+            <!-- 
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.8</version>
+                <configuration>
+                    <argLine>-XX:MaxPermSize=256m -Xms512m -Xmx512m -XX:+UseConcMarkSweepGC -XX:+CMSPermGenSweepingEnabled -XX:+CMSClassUnloadingEnabled</argLine>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExcludes>org.jboss.spec.javax.annotation:jboss-annotations-api_1.1_spec</classpathDependencyExcludes>
+                        <classpathDependencyExcludes>org.jboss.spec.javax.ejb:jboss-ejb-api_3.1_spec</classpathDependencyExcludes>
+                        <classpathDependencyExcludes>javax.enterprise:cdi-api</classpathDependencyExcludes>
+                        <classpathDependencyExcludes>com.sun.faces:jsf-api</classpathDependencyExcludes>
+                        <classpathDependencyExcludes>javax.validation:validation-api</classpathDependencyExcludes>
+                        <classpathDependencyExcludes>org.hibernate.javax.persistence:hibernate-jpa-2.0-api</classpathDependencyExcludes>
+                    </classpathDependencyExcludes>
+                </configuration>
+            </plugin>
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <attachClasses>true</attachClasses>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
+                <dependencies>
+                    <!--
+                        Description Resource Path Location Type
+                        org.codehaus.plexus.archiver.jar.Manifest.write(java.io.PrintWriter) pom.xml /orangec-jar
+                        
+                        It is caused when maven-jar-plugin is 3.0.0+ and plexus archiver is 3.3+.
+                    -->
+                    <dependency>
+                        <groupId>org.codehaus.plexus</groupId>
+                        <artifactId>plexus-archiver</artifactId>
+                        <version>3.2</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>idv.myjava</groupId>
+        <artifactId>orangec-parent</artifactId>
+        <version>1.0</version>
+    </parent>
+    
+    <groupId>idv.myjava</groupId>
+    <artifactId>orangec-ejb</artifactId>
+    <version>1.0</version>
+    <packaging>ejb</packaging>
+    <description>orangec Java EJB module</description>
+    
+    <properties>
+        <jdk.version>1.8</jdk.version>
+        <orangec.version>1.0</orangec.version>
+        <hibernate.version>5.2.13.Final</hibernate.version>
+    </properties>
+    
+    <dependencies>
+        <!-- Java EE @Inject -->
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+        </dependency>
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>6.0</version>
+            <scope>provided</scope>
+            <type>jar</type>
+        </dependency>
+        <!-- EJB3 -->
+        <dependency>
+            <groupId>javax.ejb</groupId>
+            <artifactId>javax.ejb-api</artifactId>
+            <version>3.2</version>
+        </dependency>
+        <!-- hibernate (JPA implementation) -->
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <!--
+        <dependency>
+            <groupId>org.hibernate.javax.persistence</groupId>
+            <artifactId>hibernate-jpa-2.1-api</artifactId>
+            <version>1.0.0.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml</groupId>
+            <artifactId>classmate</artifactId>
+            <version>1.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.btm</groupId>
+            <artifactId>btm</artifactId>
+            <version>2.1.4</version>
+        </dependency>
+        -->
+        <!-- web service by JAX-RS using jersey -->
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <version>2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet</artifactId>
+            <version>2.25</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>2.25</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>idv.myjava</groupId>
+            <artifactId>orangec-jar</artifactId>
+            <version>${orangec.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <finalName>orangec-ejb</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-ejb-plugin</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <ejbVersion>3.0</ejbVersion>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>idv.myjava</groupId>
+        <artifactId>orangec-parent</artifactId>
+        <version>1.0</version>
+    </parent>
+    
+    <groupId>idv.myjava</groupId>
+    <artifactId>orangec-ear</artifactId>
+    <version>1.0</version>
+    <packaging>ear</packaging>
+    <description>orangec Java EAR module</description>
+    
+    <properties>
+        <orangec.version>1.0</orangec.version>
+    </properties>
+    
+    <dependencies>
+        <dependency>
+            <groupId>idv.myjava</groupId>
+            <artifactId>orangec-client</artifactId>
+            <version>${orangec.version}</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>idv.myjava</groupId>
+            <artifactId>orangec-ejb</artifactId>
+            <version>${orangec.version}</version>
+            <type>ejb</type>
+        </dependency>
+        <dependency>
+            <groupId>idv.myjava</groupId>
+            <artifactId>orangec-web</artifactId>
+            <version>${orangec.version}</version>
+            <type>war</type>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <finalName>orangec-ear</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-ear-plugin</artifactId>
+                <version>2.10.1</version>
+                <configuration>
+                    <version>6</version>
+                    <defaultLibBundleDir>lib</defaultLibBundleDir>
+                    <modules>
+                        <jarModule>
+                            <groupId>idv.myjava</groupId>
+                            <artifactId>orangec-client</artifactId>
+                            <bundleFileName>orangec-client.jar</bundleFileName>
+                            <includeInApplicationXml>true</includeInApplicationXml>
+                        </jarModule>
+                        <webModule>
+                            <groupId>idv.myjava</groupId>
+                            <artifactId>orangec-web</artifactId>
+                            <bundleFileName>orangec-web.war</bundleFileName>
+                            <contextRoot>orangec</contextRoot>
+                        </webModule>
+                        <ejbModule>
+                            <groupId>idv.myjava</groupId>
+                            <artifactId>orangec-ejb</artifactId>
+                            <bundleFileName>orangec-ejb.jar</bundleFileName>
+                        </ejbModule>
+                    </modules>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>idv.myjava</groupId>
+        <artifactId>orangec-parent</artifactId>
+        <version>1.0</version>
+    </parent>
+    
+    <groupId>idv.myjava</groupId>
+    <artifactId>orangec-client</artifactId>
+    <version>1.0</version>
+    <packaging>jar</packaging>
+    <description>orangec Java Web, EJB client module</description>
+</project>
+
+
+
+https://kentyeh.github.io/mavenStartup/index.html
+http://jenkins.readbook.tw/javascript/performance/
+https://www.mkyong.com/maven/maven-how-to-create-a-multi-module-project/
