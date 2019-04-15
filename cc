@@ -315,9 +315,9 @@ public class MyFilter implements Filter {
 
 
 			       
+
 package idv.javaee.servlet.servlet;
 
-import idv.javaee.servlet.servlet.webxml.HelloServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -328,10 +328,7 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebInitParam;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.Part;
+import javax.servlet.http.*;
 import java.io.*;
 
 /**
@@ -452,15 +449,12 @@ import java.io.*;
  *   To redirect the client to a different URL
  */
 public class MyServlet extends HttpServlet {
-    private static final Logger LOGGER = LoggerFactory.getLogger(HelloServlet.class);
 
     @Override
-    public void init() throws ServletException {
-        LOGGER.info(this.getServletName() + " has started.");
+    public void init() {
     }
     @Override
     public void destroy() {
-        LOGGER.info(this.getServletName() + " has stopped.");
     }
 
     /**
@@ -485,11 +479,13 @@ public class MyServlet extends HttpServlet {
     }
 
     /**************************************************************************/
-
+    /** hello servlet (@see web.xml) */
     public static class HelloServlet extends HttpServlet {
+        private static final Logger LOGGER1 = LoggerFactory.getLogger(HelloServlet.class);
+
         @Override
-        protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-            LOGGER.info("HelloServlet doGet");
+        protected void doGet(HttpServletRequest req, HttpServletResponse res) throws IOException {
+            LOGGER1.info("== HelloServlet doGet ==");
             String user = req.getParameter("user");
             if (user == null) {
                 res.getWriter().println("Hello Servlet!");
@@ -515,8 +511,11 @@ public class MyServlet extends HttpServlet {
      * client JSP -> pages/javaee/servlet/servlet/webxml/fileUpload.jsp
      */
     public static class FileUploadServlet extends HttpServlet {
+        private static final Logger LOGGER2 = LoggerFactory.getLogger(FileUploadServlet.class);
+
         @Override
         protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+            LOGGER2.info("== FileUploadServlet doGet ==");
             Part filePart = req.getPart("file");
             if (filePart == null || filePart.getSize() == 0) {
                 res.getWriter().print("No file is uploaded");
@@ -526,7 +525,6 @@ public class MyServlet extends HttpServlet {
             InputStream inputStream = filePart.getInputStream();
             String fileName = filePart.getSubmittedFileName();
 
-            System.out.println(System.getProperty("user.dir"));
             File targetPath = new File("download");
             if (!targetPath.exists()) {
                 targetPath.mkdirs();
@@ -543,7 +541,6 @@ public class MyServlet extends HttpServlet {
             res.getWriter().print("file had been uploaded");
         }
     }
-
 
     /**
      * ==== @WebServlet ====
@@ -565,11 +562,12 @@ public class MyServlet extends HttpServlet {
     @WebServlet(
         value = {"/annoInitParamServlet", "/annoInitParam.do"},
         initParams = {
-            @WebInitParam(name = "user.email", value="user@abc.com"),
-            @WebInitParam(name = "user.phone", value="3345678")
+            @WebInitParam(name = "admin2.email", value="admin2@abc.com"),
+            @WebInitParam(name = "admin2.phone", value="3345678")
         }
     )
     public static class AnnoInitParamServlet extends HttpServlet {
+        private static final Logger LOGGER3 = LoggerFactory.getLogger(AnnoInitParamServlet.class);
         /**
          * ==== Using Context init Parameters ====
          * <context-param>
@@ -591,6 +589,8 @@ public class MyServlet extends HttpServlet {
          * </servlet>
          * _使用 javax.servlet.ServletConfig.getInitParameter()
          *
+         * @WebServlet 的 @WebInitParam 是 <servlet> 的 <init-param>
+         *
          * _整個 Web application 只會有一個 ServletContext
          * _每個 Servlet 都會有一個 ServletConfig
          *
@@ -598,15 +598,79 @@ public class MyServlet extends HttpServlet {
          */
         @Override
         protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            LOGGER3.info("== AnnoInitParamServlet doGet ==");
             ServletContext context = getServletContext();
-            String adminEmail = context.getInitParameter("admin.email");
-            String adminPhone = context.getInitParameter("admin.phone");
+            String admin1Email = context.getInitParameter("admin1.email");
+            String admin1Phone = context.getInitParameter("admin1.phone");
 
             ServletConfig config = getServletConfig();
-            String userMail = config.getInitParameter("user.email");
-            String userPhone = config.getInitParameter("user.phone");
-            response.getWriter().append("Admin email: " + adminEmail + ", phone = " + adminPhone)
-                    .append("\nUser email: " + userMail + ", phone = " + userPhone);
+            String admin2Email = config.getInitParameter("admin2.email");
+            String admin2Phone = config.getInitParameter("admin2.phone");
+            response.getWriter().append("Admin1 email: " + admin1Email + ", phone = " + admin1Phone)
+                    .append("\nAdmin2 email: " + admin2Email + ", phone = " + admin2Phone);
+        }
+    }
+
+    @WebServlet(name = "scopeServlet", urlPatterns = {"/scope.do"})
+    public static class ScopeServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+            /**
+             * == ServletContext ==
+             * _可存取性 -> Web Application 的任何部份都可存取 (Servlet, JSP, XxxListener...)
+             * _作用域    -> ServletContext 的生命週期就是 Web Application 的生命週期
+             * _適當用途 -> 讓整個應用程式共享的資源 (如 DataSource, JNDI query string....)
+             *
+             * _所有元件都能存取到 context 屬性的值，所以非執行緒安全 (值可以被修改)
+             *
+             * context.setAttribute(name, obj);
+             * Object obj = context.getAttribute(name);
+             * context.removeAttribute(name);
+             */
+            ServletContext context = getServletContext();
+            context.setAttribute("contextAAA", "context scope AAA");
+
+            /**
+             * == HttpSession ==
+             * _可存取性 -> 能夠存取特定 Session 的任何 Servlet 與 JSP (Session 能跨來自同一個客戶端的多個請求)
+             * _作用域    -> Session 的生命週期可以透過程式被銷毀，或是逾期被刪除 (time-out)
+             * _適當用途 -> 與此客戶端之 session 關連的資料或資源 (如購物車，會跨多個請求)
+             *
+             * _不同的 request 都能存取到 session 屬性的值，所以非執行緒安全 (不同請求可以修改 session 內的值)
+             *
+             * session.setAttribute(name, obj);
+             * Object obj = session.getAttribute(name);
+             * session.removeAttribute(name);
+             */
+            HttpSession session = req.getSession();
+            session.setAttribute("sessionBBB", "session scope BBB");
+
+            /**
+             * == Request ==
+             * _可存取性 -> 單一請求的 Servlet 或 JSP (forward 至其它 Servlet 也可)
+             * _作用域    -> Request 的生命週期為該 Servlet 的 service() 方法完成，也就是這個 Servlet 執行緒的生命週期
+             * _適當用途 -> 單一請求的資料或資源
+             *
+             * _是執行緒安全
+             *
+             * request.setAttribute(name, obj);
+             * Object obj = request.getAttribute(name);
+             * request.removeAttribute(name);
+             */
+            req.setAttribute("reqCCC", "request scope CCC");
+
+            /**
+             * _只有 Request attribute 與 local variable 是 Thread safe
+             * _實例變數不是執行緒安全 (任一個 Servlet thread 都能存取該實例變數)
+             * _Session, ApplicationContext 不是執行緒安全 (一樣在不同 Servlet thread 會被存取修改的可能)
+             *
+             * _要達成執行緒安全(Thread Safe)
+             *   1. 在包含 Session scope 屬性的程式碼，加上 synchronized
+             *   2. 將 Session scope 屬性的程式碼包在 synchronized(session) {...} 內
+             *   ps. 絕對不要實做 SingleThreadModel，千萬不要!!!!
+             */
+            RequestDispatcher rd = req.getRequestDispatcher("/pages/javaee/servlet/servlet/scope/scopeParameter.jsp");
+            rd.forward(req, res);
         }
     }
 
@@ -619,8 +683,11 @@ public class MyServlet extends HttpServlet {
      */
     @WebServlet(name = "dispatchServlet", urlPatterns = {"/dispatch.do", "/dispatch.action"})
     public static class DispatchServlet extends HttpServlet {
+        private static final Logger LOGGER4 = LoggerFactory.getLogger(DispatchServlet.class);
+
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+            LOGGER4.info("== DispatchServlet doGet ==");
 //            RequestDispatcher rd = req.getRequestDispatcher("/orangec/hello.do");
             RequestDispatcher rd = req.getRequestDispatcher("/hello.do");
             rd.forward(req, res);
@@ -636,8 +703,11 @@ public class MyServlet extends HttpServlet {
      */
     @WebServlet(name = "redirectServlet", urlPatterns = {"/redirect.do", "/redirect.action"})
     public static class RedirectServlet extends HttpServlet {
+        private static final Logger LOGGER5 = LoggerFactory.getLogger(RedirectServlet.class);
+
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+            LOGGER5.info("== RedirectServlet doGet ==");
             /* 絕對路徑 */
 //            res.sendRedirect("http://www.google.com");
 
@@ -697,8 +767,11 @@ public class MyServlet extends HttpServlet {
             location = "tmp"
     )
     public static class AnnoFileUploadServlet extends HttpServlet {
+        private static final Logger LOGGER6 = LoggerFactory.getLogger(AnnoFileUploadServlet.class);
+
         @Override
         protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+            LOGGER6.info("== AnnoFileUploadServlet doPost ==");
             Part filePart = request.getPart("file");
             if (filePart == null || filePart.getSize() == 0) {
                 response.getWriter().print("No file is uploaded");
@@ -727,6 +800,8 @@ public class MyServlet extends HttpServlet {
     }
 
 }
+
+			       
 
 
 
