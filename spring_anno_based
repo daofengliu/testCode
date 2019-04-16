@@ -1,0 +1,104 @@
+package idv.spring.ioc.ch03annotation;
+
+import javax.annotation.Resource;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Scope;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.stereotype.Component;
+
+/**
+ * ==== Annotation-based configuration ====
+ * Spring 2.5 introduced support for annotation-based configuration metadata.
+ *
+ * Instead of using XML to describe a bean wiring, you can move the bean configuration into the component class itself
+ *   by using annotations on the relevant class, method, or field declaration.
+ *
+ *
+ * Spring provides further stereotype annotations: @Component, @Service, and @Controller.
+ * @Component is a generic stereotype for any Spring-managed component.
+ * @Repository, @Service, and @Controller are specializations of @Component for more
+ *   specific use cases, for example, in the persistence, service, and presentation
+ *   layers, respectively.
+ * Therefore, you can annotate your component classes with @Component, but by
+ *   annotating them with @Repository, @Service, or @Controller instead, your
+ *   classes are more properly suited for processing by tools or associating with aspects.
+ * For example, these stereotype annotations make ideal targets for pointcuts.
+ * It is also possible that @Repository, @Service, and @Controller may carry
+ *   additional semantics in future releases of the Spring Framework.
+ * Thus, if you are choosing between using @Component or @Service for your service
+ *   layer, @Service is clearly the better choice.
+ * Similarly, as stated above, @Repository is already supported as a marker for
+ *   automatic exception translation in your persistence layer.
+ *
+ *   @Component     generic stereotype for any Spring-managed component
+ *   @Repository    stereotype for persistence layer
+ *   @Service       stereotype for service layer
+ *   @Controller    stereotype for presentation layer (spring-mvc)
+ *
+ * To autodetect these classes and register the corresponding beans, you need to add
+ *   <context:component-scan base-package="..." /> to spring configuration
+ *
+ *   記得設定 <context:component-scan base-package="idv.spring.ioc.ch03annotation" />
+ *
+ * 1. ch02 使用 annotation，但是 bean 的設定還是在 XML 裡，故使用 @Component 減少在 XML 的設定
+ * 2. 在 applicationContext.xml 要設定 <context:component-scan base-package="..." />
+ */
+//@Component
+@Component("myComponent")
+@Scope(BeanDefinition.SCOPE_SINGLETON)
+public class AnnotationComponent {
+
+    private static final Logger logger = LoggerFactory.getLogger(AnnotationComponent.class);
+
+    @Resource(name = "myXYZ")
+    private XYZ xyz;
+
+    @Override
+    public String toString() {
+        return "AnnotationComponent{xyz = " + xyz + "}";
+    }
+
+    /**
+     * 使用 @Scope 設定 bean 的 scope
+     */
+    @Component(value = "myXYZ")
+    @Scope(BeanDefinition.SCOPE_PROTOTYPE)
+    public static class XYZ {
+        private String value = "xxx";
+        @Override
+        public String toString() {
+            return "XYZ{value = " + value + "}";
+        }
+    }
+
+    /**
+     * 記得要使用 @Component，要在 applicationContext.xml 設定
+     *   <context:component-scan base-package="idv.spring.ioc.ch03annotation" />
+     *
+     * bean 都透過 @Component annotation 完成設定
+     *
+     * 不過不建議使用 @Component，根據情況使用 @Repository, @Service, @Controller, ...比較好
+     *   @Component – Indicates a auto scan component.
+     *   @Repository – Indicates DAO component in the persistence layer.
+     *   @Service – Indicates a Service component in the business layer.
+     *   @Controller – Indicates a controller component in the presentation layer.
+     */
+    @SuppressWarnings("resource")
+    public static void main(String[] args) {
+        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch03annotation/applicationContext.xml");
+        AnnotationComponent comp1 = ctx.getBean("myComponent", AnnotationComponent.class);
+        logger.info("component is " + comp1);
+
+        AnnotationComponent comp2 = ctx.getBean("myComponent", AnnotationComponent.class);
+        logger.info("test @Scope('singleton') is same bean ? " + (comp1 == comp2));
+
+        AnnotationComponent.XYZ xyz1 = ctx.getBean("myXYZ", AnnotationComponent.XYZ.class);
+        AnnotationComponent.XYZ xyz2 = ctx.getBean("myXYZ", AnnotationComponent.XYZ.class);
+        logger.info("test @Scope('prototype') is same bean ? " + (xyz1 == xyz2));
+    }
+
+}
