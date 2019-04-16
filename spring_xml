@@ -1,0 +1,589 @@
+package idv.spring.ioc.ch01xml;
+
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+@SuppressWarnings("unused")
+public class MyXmlApplicationContext {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyXmlApplicationContext.class);
+
+    private Ex ex;
+    private Properties prop;
+    private List<String> list;
+    private Set<String> set;
+    private Map<String, String> map;
+    private String[] array;
+
+    /********** constructor **********/
+    public MyXmlApplicationContext() {
+    }
+    public MyXmlApplicationContext(String name, Date birthday, double weight, double height) {
+        this.ex = new Ex(name, birthday, weight, height);
+    }
+    public MyXmlApplicationContext(Ex ex) {
+        this.ex = ex;
+    }
+    /********** constructor **********/
+
+
+    public static void main(String[] args) {
+        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch01xml/applicationContext.xml");
+//        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch01xml/applicationContext.xml");
+
+        MyXmlApplicationContext myXmlCtx = new MyXmlApplicationContext();
+//        myXmlCtx.constructorInjection(ctx);
+//        myXmlCtx.setterInjection(ctx);
+//        myXmlCtx.collectionInjection(ctx);
+//        myXmlCtx.compoundInjection(ctx);
+//        myXmlCtx.singletonInjection(ctx);
+//        myXmlCtx.prototypeInjection(ctx);
+//        myXmlCtx.lazyEagerInjection(ctx);
+//        myXmlCtx.dependOnInjection(ctx);
+//        myXmlCtx.autowired(ctx);
+//        myXmlCtx.lifeCycle(ctx);
+//        myXmlCtx.lifeCycle2(ctx);
+
+        ClassPathXmlApplicationContext cpXmlCtx = (ClassPathXmlApplicationContext) ctx;
+        if (cpXmlCtx.isActive()) {
+            cpXmlCtx.close();
+        }
+    }
+
+    /**
+     * @see - \idv\spring\ioc\ch01xml\beansConfig.xml
+     * INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 10:33:50 CST 2019]; root of context hierarchy
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.constructorInjection(MyXmlApplicationContext.java:64) - ==== MyXmlApplicationContext constructorInjection ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.constructorInjection(MyXmlApplicationContext.java:66) - constructorInjection1 = MyXmlApplicationContext {ex = Ex {name = bean 1, birthday = Sun Jan 01 00:00:00 CST 2017, weight = 55.0, height = 170.0}}
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.constructorInjection(MyXmlApplicationContext.java:69) - constructorInjection2 = MyXmlApplicationContext {ex = Ex {name = bean 2, birthday = Wed Feb 01 00:00:00 CST 2017, weight = 56.0, height = 171.0}}
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.constructorInjection(MyXmlApplicationContext.java:72) - constructorInjection3 = MyXmlApplicationContext {ex = Ex {name = bean 3, birthday = Wed Mar 01 00:00:00 CST 2017, weight = 57.0, height = 172.0}}
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.constructorInjection(MyXmlApplicationContext.java:75) - constructorInjection4 = MyXmlApplicationContext {ex = Ex {name = bean 4, birthday = Sat Apr 01 00:00:00 CST 2017, weight = 58.0, height = 173.0}}
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.constructorInjection(MyXmlApplicationContext.java:78) - constructorInjection5 = MyXmlApplicationContext {ex = Ex {name = ex 1, birthday = Mon May 01 00:00:00 CST 2017, weight = 59.0, height = 174.0}}
+     */
+    private void constructorInjection(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext constructorInjection ====");
+        MyXmlApplicationContext bean1 = ctx.getBean("constructorInjection1", MyXmlApplicationContext.class);
+        LOGGER.info("constructorInjection1 = " + bean1);
+
+        MyXmlApplicationContext bean2 = ctx.getBean("constructorInjection2", MyXmlApplicationContext.class);
+        LOGGER.info("constructorInjection2 = " + bean2);
+
+        MyXmlApplicationContext bean3 = ctx.getBean("constructorInjection3", MyXmlApplicationContext.class);
+        LOGGER.info("constructorInjection3 = " + bean3);
+
+        MyXmlApplicationContext bean4 = ctx.getBean("constructorInjection4", MyXmlApplicationContext.class);
+        LOGGER.info("constructorInjection4 = " + bean4);
+
+        MyXmlApplicationContext bean5 = ctx.getBean("constructorInjection5", MyXmlApplicationContext.class);
+        LOGGER.info("constructorInjection5 = " + bean5);
+    }
+
+    /**
+     * @see - \idv\spring\ioc\ch01xml\beansConfig.xml
+     * INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 10:30:08 CST 2019]; root of context hierarchy
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.setterInjection(MyXmlApplicationContext.java:82) - ==== MyXmlApplicationContext setterInjection ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.setterInjection(MyXmlApplicationContext.java:84) - setterInjection1 = MyXmlApplicationContext {ex = Ex {name = ex 2, birthday = Thu Apr 20 00:00:00 CST 2017, weight = 60.0, height = 175.0}}
+     */
+    private void setterInjection(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext setterInjection ====");
+        MyXmlApplicationContext bean = ctx.getBean("setterInjection1", MyXmlApplicationContext.class);
+        LOGGER.info("setterInjection1 = " + bean);
+    }
+
+    /**
+     * @see - \idv\spring\ioc\ch01xml\beansConfig.xml
+     * INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 10:35:07 CST 2019]; root of context hierarchy
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.collectionInjection(MyXmlApplicationContext.java:99) - ==== MyXmlApplicationContext collectionInjection ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.collectionInjection(MyXmlApplicationContext.java:101) - prop = {a=AAA, 1=111}, list = [1, 2], set = [x, y], map = {1=John, 2=Joe}, array = a,b
+     */
+    private void collectionInjection(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext collectionInjection ====");
+        MyXmlApplicationContext bean = ctx.getBean("collections", MyXmlApplicationContext.class);
+        LOGGER.info("prop = " + bean.prop +
+                ", list = " + bean.list +
+                ", set = " + bean.set +
+                ", map = " + bean.map +
+                ", array = " + StringUtils.join(bean.array, ","));
+    }
+
+    /**
+     * @see - \idv\spring\ioc\ch01xml\beansConfig.xml
+     * INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 10:36:47 CST 2019]; root of context hierarchy
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.compoundInjection(MyXmlApplicationContext.java:117) - ==== MyXmlApplicationContext compoundInjection ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.compoundInjection(MyXmlApplicationContext.java:119) - compoundInjection = Ex {name = compound, birthday = Mon May 01 00:00:00 CST 2017, weight = 70.0, height = 185.0}
+     */
+    private void compoundInjection(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext compoundInjection ====");
+        MyXmlApplicationContext bean = ctx.getBean("compoundInjection", MyXmlApplicationContext.class);
+        LOGGER.info("compoundInjection = " + bean.ex);
+    }
+
+    /**
+     * @see - \idv\spring\ioc\ch01xml\beansConfig.xml
+     * INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 10:55:17 CST 2019]; root of context hierarchy
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton.<init>(MyXmlApplicationContext.java:345) - ==== Singleton default constructor ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.singletonInjection(MyXmlApplicationContext.java:142) - ==== MyXmlApplicationContext singletonInjection ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.singletonInjection(MyXmlApplicationContext.java:145) - bean1 == bean2 ? true
+     *
+     * <bean id="singleton" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Engine" />
+     * _<bean> 沒指定 scope 屬性，預設為 scope="singleton"，每次 getBean() 都會取得同一個 bean
+     * _singleton bean 在 application context 建立後，就會接著被建立，也只會建立這一次
+     */
+    private void singletonInjection(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext singletonInjection ====");
+        Singleton bean1 = ctx.getBean("singleton", Singleton.class);
+        Singleton bean2 = ctx.getBean("singleton", Singleton.class);
+        LOGGER.info("bean1 == bean2 ? " + (bean1 == bean2));
+    }
+
+    /**
+     * @see - \idv\spring\ioc\ch01xml\beansConfig.xml
+     * [2019/04/16 10:57:27:920] INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 10:57:27 CST 2019]; root of context hierarchy
+     * [2019/04/16 10:57:28:034] INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * [2019/04/16 10:57:28:188] INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * [2019/04/16 10:57:28:719] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton.<init>(MyXmlApplicationContext.java:347) - ==== Singleton default constructor ====
+     * [2019/04/16 10:57:28:743] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.prototypeInjection(MyXmlApplicationContext.java:162) - ==== MyXmlApplicationContext prototypeInjection ====
+     * [2019/04/16 10:57:28:744] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$Prototype.<init>(MyXmlApplicationContext.java:353) - ==== Prototype default constructor ====
+     * [2019/04/16 10:57:28:744] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$Prototype.<init>(MyXmlApplicationContext.java:353) - ==== Prototype default constructor ====
+     * [2019/04/16 10:57:28:745] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.prototypeInjection(MyXmlApplicationContext.java:165) - bean1 == bean2 ? false
+     *
+     * <bean id="prototype" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Engine" scope="prototype" />
+     * _<bean> 指定 scope="prototype"，每次 getBean() 時，才會建立新的 bean (看 log 的執行順序)
+     */
+    private void prototypeInjection(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext prototypeInjection ====");
+        Prototype bean1 = ctx.getBean("prototype", Prototype.class);
+        Prototype bean2 = ctx.getBean("prototype", Prototype.class);
+        LOGGER.info("bean1 == bean2 ? " + (bean1 == bean2));
+    }
+
+    /**
+     * @see - \idv\spring\ioc\ch01xml\beansConfig.xml
+     * INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 10:47:17 CST 2019]; root of context hierarchy
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$Eager.<init>(MyXmlApplicationContext.java:344) - ==== Eager default constructor ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.lazyEagerInjection(MyXmlApplicationContext.java:174) - ==== MyXmlApplicationContext lazyEagerInjection ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$Lazy.<init>(MyXmlApplicationContext.java:338) - ==== Lazy default constructor ====
+     *
+     * <bean id="lazy" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Lazy" lazy-init="true" />
+     * <bean id="eager" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Eager" />
+     * _由 log 可知， eager 這個 bean 在執行 lazyEagerInjection() 之前就已經被建立
+     * _ps. bean 在設定了 lazy-init="true" 時，就算是 singleton 也不會先建立 bean
+     */
+    private void lazyEagerInjection(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext lazyEagerInjection ====");
+        Lazy lazy = ctx.getBean("lazy", Lazy.class);
+        Eager eager = ctx.getBean("eager", Eager.class);
+    }
+
+    /**
+     * @see - \idv\spring\ioc\ch01xml\beansConfig.xml
+     * [2019/04/16 11:00:14:764] INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 11:00:14 CST 2019]; root of context hierarchy
+     * [2019/04/16 11:00:14:864] INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * [2019/04/16 11:00:15:004] INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * [2019/04/16 11:00:15:510] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.dependOnInjection(MyXmlApplicationContext.java:228) - ==== MyXmlApplicationContext dependOnInjection ====
+     * [2019/04/16 11:00:15:511] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.dependOnInjection(MyXmlApplicationContext.java:231) - car = Car {engine = Engine {type = Honda}}
+     * [2019/04/16 11:00:15:511] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.dependOnInjection(MyXmlApplicationContext.java:232) - engine = Engine {type = Honda}
+     *
+     *
+     * <bean id="car" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Car">
+     *     <constructor-arg name="engine" ref="engine" />
+     * </bean>
+     * <bean id="engine" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Engine">
+     *     <constructor-arg name="type" value="Honda" />
+     * </bean>
+     *
+     *     ==== public Engine(String type) {} ====
+     *     ==== public Car(Engine engine) {} ====
+     *     ==== depend-on injection ====
+     *     car = Car {engine = Engine {type = Honda}}
+     *     engine = Engine {type = Honda}
+     *
+     * <bean id="engine" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Engine">
+     *     <property name="type" value="Honda" />
+     * </bean>
+     * <bean id="car" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Car">
+     *     <property name="engine" ref="engine" />
+     * </bean>
+     *
+     *     ==== public Car() {} ====
+     *     ==== public Engine() {} ====
+     *     ==== depend-on injection ====
+     *     car = Car {engine = Engine {type = Honda}}
+     *     engine = Engine {type = Honda}
+     *
+     * _由上面的例子來看，Spring 似乎會判斷 bean reference 的關係，而不必再用 depends-on="xxx"
+     *
+     * <bean id="car" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Car" depends-on="engine">
+     *     <property name="engine" ref="engine" />
+     * </bean>
+     * <bean id="engine" class="idv.spring.ioc.ch01xml.entity.Engine">
+     *     <constructor-arg value="Honda" />
+     * </bean>
+     */
+    private void dependOnInjection(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext dependOnInjection ====");
+        Car car = ctx.getBean("car", Car.class);
+        Engine engine = ctx.getBean("engine", Engine.class);
+        LOGGER.info("car = " + car);
+        LOGGER.info("engine = " + engine);
+    }
+
+    /**
+     * ==== Autowiring modes ====
+     * == no (Default) ==
+     * No autowiring.
+     * Bean references must be defined via a ref element.
+     * Changing the default setting is not recommended for larger deployments, because specifying collaborators explicitly gives greater control and clarity.
+     * _預設不做自動注入，在大型專案時建議使用此模式
+     *
+     * == byName ==
+     * Autowiring by property name.
+     * Spring looks for a bean with the same name as the property that needs to be autowired.
+     *
+     *   <bean id="civicByName" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Honda" autowire="byName">
+     *         <property name="brand" value="Honda" />
+     *   </bean>
+     *   <bean id="engine" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$R18A1">
+     *       <property name="type" value="R18A1" />
+     *   </bean>
+     *   _Honda 繼承 Car，有一個 Engine 類別的 field 宣告為 engine
+     *   _若要使用 autowired by name，則必須有一個 bean 的 id 為 "field" (該 bean 的類別也必須為 Engine)
+     *   _ps. 若無符合的 bean，也不會發生 Exception，不過 civicByName 這個 bean 的 engine 會是 null
+     *
+     * == byType ==
+     * Allows a property to be autowired if exactly one bean of the property type exists in the container.
+     * If more than one exists, a fatal exception is thrown, which indicates that you may not use byType autowiring for that bean.
+     * If there are no matching beans, nothing happens (the property is not set).
+     *
+     *   <bean id="civicByType" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Honda" autowire="byType">
+     *       <property name="brand" value="Honda" />
+     *   </bean>
+     *   <bean id="honda_R18A1" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$R18A1">
+     *       <property name="type" value="R18A1" />
+     *   </bean>
+     *   _使用 autowired by type，只能有一個 Engine 類別的 bean
+     *   _若超過一個 Engine 類別的 bean，則
+     *     Exception in thread "main" org.springframework.beans.factory.UnsatisfiedDependencyException:
+     *       Error creating bean with name 'civicByType' defined in class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]:
+     *       Unsatisfied dependency expressed through bean property 'engine'; nested exception is org.springframework.beans.factory.NoUniqueBeanDefinitionException:
+     *       No qualifying bean of type 'idv.spring.ioc.ch01xml.MyXmlApplicationContext$Engine' available:
+     *       expected single matching bean but found 3: honda_R18A1,toyota_WW,engine
+     *   _由UnsatisfiedDependencyException 可知，有三個符合 type 的 bean: "honda_R18A1", "toyota_WW", "engine"
+     *   _ps. 在 Service 自動注入 DAO 常用到，通常某個 DAO 只會有一個 bean
+     *
+     * == constructor ==
+     * Analogous to byType, but applies to constructor arguments.
+     * If there is not exactly one bean of the constructor argument type in the container, a fatal error is raised.
+     * _類似 byType
+     */
+    private void autowired(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext autowired ====");
+        Car civic = ctx.getBean("civic", Car.class);
+        Car altis = ctx.getBean("altis", Car.class);
+        Car civicByName = ctx.getBean("civicByName", Car.class);
+        Car civicByType = ctx.getBean("civicByType", Car.class);
+        LOGGER.info("civic = " + civic);
+        LOGGER.info("altis = " + altis);
+        LOGGER.info("civicByName = " + civicByName);
+//        LOGGER.info("civicByType = " + civicByType);
+    }
+
+    /**
+     * [2019/04/16 14:21:26:939] INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 14:21:26 CST 2019]; root of context hierarchy
+     * [2019/04/16 14:21:27:033] INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * [2019/04/16 14:21:27:179] INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * [2019/04/16 14:21:27:725] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.<init>(MyXmlApplicationContext.java:500) - ==== LifeCycle constructor ====
+     * [2019/04/16 14:21:27:726] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.afterPropertiesSet(MyXmlApplicationContext.java:504) - ==== LifeCycle afterPropertiesSet() ====
+     * [2019/04/16 14:21:27:741] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.lifeCycle(MyXmlApplicationContext.java:333) - ==== lifeCycle ====
+     * [2019/04/16 14:21:27:742] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.lifeCycle(MyXmlApplicationContext.java:335) - == before application context close ==
+     * [2019/04/16 14:21:27:742] INFO  org.springframework.context.support.AbstractApplicationContext.doClose(AbstractApplicationContext.java:989) - Closing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 14:21:26 CST 2019]; root of context hierarchy
+     * [2019/04/16 14:21:27:744] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.destroy(MyXmlApplicationContext.java:508) - ==== LifeCycle destroy() ====
+     * [2019/04/16 14:21:27:745] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.lifeCycle(MyXmlApplicationContext.java:337) - == after application context close ==
+     *
+     * _ps. <bean id="lifecycle" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle" />
+     *
+     * ==== Lifecycle Callbacks ====
+     * To interact with the container’s management of the bean lifecycle, you can implement the Spring InitializingBean and DisposableBean interfaces.
+     * The container calls afterPropertiesSet() for the former and destroy() for the latter to let the bean perform certain actions upon initialization and destruction of your beans.
+     * _實作 InitializingBean 的 afterPropertiesSet()，在 Spring container 初始化 bean 後，會執行 callback
+     * _實作 DisposableBean 的 destroy()，
+     *
+     *
+     * ==== Spring Bean Life Cycle Steps ====
+     * 1. Within IoC container, a spring bean is created using class constructor.
+     * 2. Now the dependency injection is performed using setter method.
+     * 3. Once the dependency injection is completed, BeanNameAware.setBeanName() is called.
+     *    It sets the name of bean in the bean factory that created this bean.
+     * 4. Now BeanClassLoaderAware.setBeanClassLoader() is called that supplies the bean class loader to a bean instance.
+     * 5. Now BeanFactoryAware.setBeanFactory() is called that provides the owning factory to a bean instance.
+     * 6. Now the IoC container calls BeanPostProcessor.postProcessBeforeInitialization on the bean.
+     *    Using this method a wrapper can be applied on original bean.
+     * 7. Now the method annotated with @PostConstruct is called.
+     * 8. After @PostConstruct, the method InitializingBean.afterPropertiesSet() is called.
+     * 9. Now the method specified by init-method attribute of bean in XML configuration is called.
+     * 10. And then BeanPostProcessor.postProcessAfterInitialization() is called.
+     *     It can also be used to apply wrapper on original bean.
+     * 11. Now the bean instance is ready to be used.
+     *     Perform the task using the bean.
+     * 12. Now when the ApplicationContext shuts down such as by using registerShutdownHook() then the method annotated with @PreDestroy is called.
+     * 13. After that DisposableBean.destroy() method is called on the bean.
+     * 14. Now the method specified by destroy-method attribute of bean in XML configuration is called.
+     * 15. Before garbage collection, finalize() method of Object is called.
+     *
+     * ==== Initialization Callbacks ====
+     * In the bean life cycle initialization callbacks are those methods which are called just after the properties of the bean has been set by IoC container.
+     * The spring InitializingBean has a method as afterPropertiesSet() which performs initialization work after the bean properties has been set.
+     * Using InitializingBean is not being recommended by spring because it couples the code.
+     * We should use @PostConstruct or method specified by bean attribute init-method in XML which is the same as initMethod attribute of @Bean annotation in JavaConfig.
+     * If all the three are used together, they will be called in below order in bean life cycle.
+     *   1. First @PostConstruct will be called.
+     *   2. Then InitializingBean.afterPropertiesSet() is called
+     *   3. And then method specified by bean init-method in XML or initMethod of @Bean in JavaConfig.
+     *
+     * ==== Destruction Callbacks ====
+     * In bean life cycle when a bean is destroyed from the IoC container, destruction callback is called.
+     * To get the destruction callback, bean should implement spring DisposableBean interface and the method destroy() will be called.
+     * Spring recommends not to use DisposableBean because it couples the code.
+     * As destruction callback we should use @PreDestroy annotation or bean attribute destroy-method in XML configuration which is same as destroyMethod attribute of @Bean in JavaConfig. If we use all these callbacks together then they will execute in following order in bean life cycle.
+     *   1. First @PreDestroy will be called.
+     *   2. After that DisposableBean.destroy() will be called.
+     *   3. And then method specified by bean destroy-method in XML configuration is called.
+     *
+     * _InitializingBean & DisposableBean are not being recommended by spring because it couples the code
+     * _bean 實做 InitializingBean 或 DisposableBean 則該 bean 除了原本該做的事，還得額外處理生命週期的工作
+     * _所以 Spring 建議使用
+     *   1. <bean ... init-method="doInit" destroy-method="doDestroy"/>
+     *   2. @PostConstruct, @PreDestroy
+     */
+    private void lifeCycle(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext lifeCycle ====");
+        LifeCycle bean = ctx.getBean("lifecycle1", LifeCycle.class);
+        LOGGER.info("== before application context close ==");
+        ((ClassPathXmlApplicationContext) ctx).close();
+        LOGGER.info("== after application context close ==");
+    }
+    /**
+     * [2019/04/16 14:23:03:194] INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 14:23:03 CST 2019]; root of context hierarchy
+     * [2019/04/16 14:23:03:292] INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * [2019/04/16 14:23:03:438] INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * [2019/04/16 14:23:04:056] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.<init>(MyXmlApplicationContext.java:497) - ==== LifeCycle constructor ====
+     * [2019/04/16 14:23:04:056] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.afterPropertiesSet(MyXmlApplicationContext.java:501) - ==== LifeCycle afterPropertiesSet() ====
+     * [2019/04/16 14:23:04:056] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.doInit(MyXmlApplicationContext.java:509) - ==== LifeCycle doInit() ====
+     * [2019/04/16 14:23:04:072] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.lifeCycle2(MyXmlApplicationContext.java:337) - ==== MyXmlApplicationContext lifeCycle2 ====
+     * [2019/04/16 14:23:04:074] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.lifeCycle2(MyXmlApplicationContext.java:339) - == before application context close ==
+     * [2019/04/16 14:23:04:074] INFO  org.springframework.context.support.AbstractApplicationContext.doClose(AbstractApplicationContext.java:989) - Closing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 14:23:03 CST 2019]; root of context hierarchy
+     * [2019/04/16 14:23:04:076] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.destroy(MyXmlApplicationContext.java:505) - ==== LifeCycle destroy() ====
+     * [2019/04/16 14:23:04:076] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.doDestroy(MyXmlApplicationContext.java:512) - ==== LifeCycle doDestroy() ====
+     * [2019/04/16 14:23:04:077] INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext.lifeCycle2(MyXmlApplicationContext.java:341) - == after application context close ==
+     *
+     * _ps. <bean id="lifecycle2" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle"
+     *            init-method="doInit" destroy-method="doDestroy"/>
+     */
+    private void lifeCycle2(ApplicationContext ctx) {
+        LOGGER.info("==== MyXmlApplicationContext lifeCycle2 ====");
+        LifeCycle bean = ctx.getBean("lifecycle2", LifeCycle.class);
+        LOGGER.info("== before application context close ==");
+        ((ClassPathXmlApplicationContext) ctx).close();
+        LOGGER.info("== after application context close ==");
+    }
+
+
+    @Override
+    public String toString() {
+        return "MyXmlApplicationContext {ex = " + ex + "}";
+    }
+
+
+    public Ex getEx() {
+        return ex;
+    }
+    public void setEx(Ex ex) {
+        this.ex = ex;
+    }
+
+    public void setProp(Properties prop) {
+        this.prop = prop;
+    }
+    public void setList(List<String> list) {
+        this.list = list;
+    }
+    public void setSet(Set<String> set) {
+        this.set = set;
+    }
+    public void setMap(Map<String, String> map) {
+        this.map = map;
+    }
+    public void setArray(String[] array) {
+        this.array = array;
+    }
+
+    private static class Ex {
+        private String name;
+        private Date birthday;
+        private double weight;
+        private double height;
+
+        public Ex() {
+        }
+        public Ex(String name, Date birthday, double weight, double height) {
+            this.name = name;
+            this.birthday = birthday;
+            this.weight = weight;
+            this.height = height;
+        }
+
+        public String getName() {
+            return name;
+        }
+        public void setName(String name) {
+            this.name = name;
+        }
+        public Date getBirthday() {
+            return birthday;
+        }
+        public void setBirthday(Date birthday) {
+            this.birthday = birthday;
+        }
+        public double getWeight() {
+            return weight;
+        }
+        public void setWeight(double weight) {
+            this.weight = weight;
+        }
+        public double getHeight() {
+            return height;
+        }
+        public void setHeight(double height) {
+            this.height = height;
+        }
+        @Override
+        public String toString() {
+            return "Ex {name = " + name + ", birthday = " + birthday + ", weight = " + weight + ", height = " + height + "}";
+        }
+    }
+
+    private static class Singleton {
+        public Singleton() {
+            LOGGER.info("==== Singleton default constructor ====");
+        }
+    }
+
+    private static class Prototype {
+        public Prototype() {
+            LOGGER.info("==== Prototype default constructor ====");
+        }
+    }
+
+    private static class Lazy {
+        public Lazy() {
+            LOGGER.info("==== Lazy default constructor ====");
+        }
+    }
+
+    private static class Eager {
+        public Eager() {
+            LOGGER.info("==== Eager default constructor ====");
+        }
+    }
+
+    private static abstract class Car {
+        private String brand;
+        private Engine engine;
+
+        public Car() {
+        }
+        public Car(String brand, Engine engine) {
+            this.brand = brand;
+            this.engine = engine;
+        }
+
+        public void setBrand(String brand) {
+            this.brand = brand;
+        }
+        public void setEngine(Engine engine) {
+            this.engine = engine;
+        }
+
+        @Override
+        public String toString() {
+            return "Car {brand = " + brand + ", engine = " + engine + "}";
+        }
+    }
+
+    private static abstract class Engine {
+        private String type;
+
+        public Engine() {
+        }
+        public Engine(String type) {
+            this.type = type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        @Override
+        public String toString() {
+            return "Engine {type = " + type + "}";
+        }
+    }
+
+    private static class Honda extends Car {
+    }
+    private static class Toyota extends Car {
+    }
+    private static class R18A1 extends Engine {
+    }
+    private static class WW extends Engine {
+    }
+
+    /**
+     * Spring 建議不要 implements InitializingBean, DisposableBean
+     * @see - lifeCycle(ApplicationContext ctx) 說明
+     */
+    private static class LifeCycle implements InitializingBean, DisposableBean {
+        public LifeCycle() {
+            LOGGER.info("==== LifeCycle constructor ====");
+        }
+        @Override
+        public void afterPropertiesSet() throws Exception {
+            LOGGER.info("==== LifeCycle afterPropertiesSet() ====");
+        }
+        @Override
+        public void destroy() throws Exception {
+            LOGGER.info("==== LifeCycle destroy() ====");
+        }
+
+        public void doInit() {
+            LOGGER.info("==== LifeCycle doInit() ====");
+        }
+        public void doDestroy() {
+            LOGGER.info("==== LifeCycle doDestroy() ====");
+        }
+    }
+
+}
