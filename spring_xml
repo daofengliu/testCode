@@ -585,5 +585,460 @@ public class MyXmlApplicationContext {
             LOGGER.info("==== LifeCycle doDestroy() ====");
         }
     }
-
 }
+
+
+
+
+package idv.spring.ioc.ch01xml;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+public class MyBeanPostProcessor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyBeanPostProcessor.class);
+
+    public static void main(String[] args) {
+        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch01xml/applicationContext.xml");
+//        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch01xml/applicationContext.xml");
+
+        Object bean = ctx.getBean("lifecycle1");
+        LOGGER.info("bean = " + bean);
+
+        ClassPathXmlApplicationContext cpXmlCtx = (ClassPathXmlApplicationContext) ctx;
+        if (cpXmlCtx.isActive()) {
+            cpXmlCtx.close();
+        }
+    }
+
+    /**************************************************************************/
+    /**
+     * ==== log bean post processor ====
+     * INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 16:15:48 CST 2019]; root of context hierarchy
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:30) - == LogBeanPostProcessor postProcessBeforeInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:31) - beanName = MyXmlApplicationContext {ex = Ex {name = bean 1, birthday = Sun Jan 01 00:00:00 CST 2017, weight = 55.0, height = 170.0}}, bean = MyXmlApplicationContext {ex = Ex {name = bean 1, birthday = Sun Jan 01 00:00:00 CST 2017, weight = 55.0, height = 170.0}}
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:37) - == LogBeanPostProcessor postProcessAfterInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:38) - beanName = MyXmlApplicationContext {ex = Ex {name = bean 1, birthday = Sun Jan 01 00:00:00 CST 2017, weight = 55.0, height = 170.0}}, bean = MyXmlApplicationContext {ex = Ex {name = bean 1, birthday = Sun Jan 01 00:00:00 CST 2017, weight = 55.0, height = 170.0}}
+     * ...
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton.<init>(MyXmlApplicationContext.java:443) - ==== Singleton default constructor ====
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:30) - == LogBeanPostProcessor postProcessBeforeInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:31) - beanName = idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton@64d2d351, bean = idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton@64d2d351
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:37) - == LogBeanPostProcessor postProcessAfterInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:38) - beanName = idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton@64d2d351, bean = idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton@64d2d351
+     * ...
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:30) - == LogBeanPostProcessor postProcessBeforeInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:31) - beanName = Engine {type = R18A1}, bean = Engine {type = R18A1}
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:37) - == LogBeanPostProcessor postProcessAfterInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:38) - beanName = Engine {type = R18A1}, bean = Engine {type = R18A1}
+     * ...
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.<init>(MyXmlApplicationContext.java:519) - ==== LifeCycle constructor ====
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:30) - == LogBeanPostProcessor postProcessBeforeInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:31) - beanName = idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle@176d53b2, bean = idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle@176d53b2
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.afterPropertiesSet(MyXmlApplicationContext.java:523) - ==== LifeCycle afterPropertiesSet() ====
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:37) - == LogBeanPostProcessor postProcessAfterInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:38) - beanName = idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle@176d53b2, bean = idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle@176d53b2
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.<init>(MyXmlApplicationContext.java:519) - ==== LifeCycle constructor ====
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:30) - == LogBeanPostProcessor postProcessBeforeInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:31) - beanName = idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle@971d0d8, bean = idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle@971d0d8
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.afterPropertiesSet(MyXmlApplicationContext.java:523) - ==== LifeCycle afterPropertiesSet() ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.doInit(MyXmlApplicationContext.java:531) - ==== LifeCycle doInit() ====
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:37) - == LogBeanPostProcessor postProcessAfterInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:38) - beanName = idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle@971d0d8, bean = idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle@971d0d8
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:30) - == LogBeanPostProcessor postProcessBeforeInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessBeforeInitialization(MyBeanPostProcessor.java:31) - beanName = MyDataSource {driverClassName = org.hsqldb.jdbcDriver, url = jdbc:hsqldb:mem:myapp, username = sa, password = , aaaa = ${aaaa.xxx}, bbbb = ${bbbb.yyy}}, bean = MyDataSource {driverClassName = org.hsqldb.jdbcDriver, url = jdbc:hsqldb:mem:myapp, username = sa, password = , aaaa = ${aaaa.xxx}, bbbb = ${bbbb.yyy}}
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:37) - == LogBeanPostProcessor postProcessAfterInitialization ==
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor.postProcessAfterInitialization(MyBeanPostProcessor.java:38) - beanName = MyDataSource {driverClassName = org.hsqldb.jdbcDriver, url = jdbc:hsqldb:mem:myapp, username = sa, password = , aaaa = ${aaaa.xxx}, bbbb = ${bbbb.yyy}}, bean = MyDataSource {driverClassName = org.hsqldb.jdbcDriver, url = jdbc:hsqldb:mem:myapp, username = sa, password = , aaaa = ${aaaa.xxx}, bbbb = ${bbbb.yyy}}
+     * INFO  org.springframework.context.support.AbstractApplicationContext.doClose(AbstractApplicationContext.java:989) - Closing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 16:15:48 CST 2019]; root of context hierarchy
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.destroy(MyXmlApplicationContext.java:527) - ==== LifeCycle destroy() ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.doDestroy(MyXmlApplicationContext.java:534) - ==== LifeCycle doDestroy() ====
+     * INFO  idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle.destroy(MyXmlApplicationContext.java:527) - ==== LifeCycle destroy() ====
+     *
+     * @see <bean id="logBeanPostProcessor" class="idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor" />
+     *
+     * ==== life cycle ====
+     * _MyXmlApplicationContext 的範例，要在各別的 Spring bean lifecycle
+     *   _可以 implements InitializingBean, DisposableBean
+     *   _或是使用 <bean id="xxx" class="x.y.Z" init-method="doInit" destroy-method="doDestroy"/>
+     *
+     * _要統一對所有 bean 的生命週期處理，則可以建立實做 BeanPostProcessor 的 processor
+     *   _則所有 bean 在初始化之前及初始化之後，會執行需要做的事
+     * _然後在 application context 註冊該 processor 為 spring bean
+     *
+     * _ps. postProcessBeforeInitialization(), postProcessAfterInitialization()
+     *   _回傳參數的 bean 就好，不要回傳其它值
+     */
+    public static class LogBeanPostProcessor implements BeanPostProcessor {
+        @Override
+        public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+            LOGGER.info("== LogBeanPostProcessor postProcessBeforeInitialization ==");
+            LOGGER.info("beanName = " + bean + ", bean = " + bean);
+            return bean;
+        }
+
+        @Override
+        public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+            LOGGER.info("== LogBeanPostProcessor postProcessAfterInitialization ==");
+            LOGGER.info("beanName = " + bean + ", bean = " + bean);
+            return bean;
+        }
+    }
+}
+
+
+
+
+package idv.spring.ioc.ch01xml;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+public class MyBeanPropertiesConfigurer {
+
+    private static final Logger logger = LoggerFactory.getLogger(MyBeanPropertiesConfigurer.class);
+
+    /**
+     * @see - @see - \idv\spring\ioc\ch01xml\applicationContext.xml, jdbc.properties
+     * INFO  org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Tue Apr 16 11:05:44 CST 2019]; root of context hierarchy
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/applicationContext.xml]
+     * INFO  org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch01xml/beansConfig.xml]
+     * INFO  idv.spring.ioc.ch01xml.MyBeanPropertiesConfigurer.main(MyBeanPropertiesConfigurer.java:17) - MyDataSource = MyDataSource {driverClassName = org.hsqldb.jdbcDriver, url = jdbc:hsqldb:mem:myapp, username = sa, password = , aaaa = ${aaaa.xxx}, bbbb = ${bbbb.yyy}}
+     */
+    @SuppressWarnings("resource")
+    public static void main(String[] args) {
+        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch01xml/applicationContext.xml");
+
+        MyDataSource dataSource = ctx.getBean("dataSource", MyDataSource.class);
+        logger.info("MyDataSource = " + dataSource);
+    }
+
+    public static class MyDataSource {
+        private String driverClassName;
+        private String url;
+        private String username;
+        private String password;
+        private String aaaa;
+        private String bbbb;
+
+        public void setDriverClassName(String driverClassName) {
+            this.driverClassName = driverClassName;
+        }
+        public void setUrl(String url) {
+            this.url = url;
+        }
+        public void setUsername(String username) {
+            this.username = username;
+        }
+        public void setPassword(String password){
+            this.password = password;
+        }
+        public void setAaaa(String aaaa) {
+            this.aaaa = aaaa;
+        }
+        public void setBbbb(String bbbb) {
+            this.bbbb = bbbb;
+        }
+        @Override
+        public String toString() {
+            return "MyDataSource {" +
+                        "driverClassName = " + driverClassName +
+                        ", url = " + url +
+                        ", username = " + username +
+                        ", password = " + password +
+                        ", aaaa = " + aaaa +
+                        ", bbbb = " + bbbb + "}";
+        }
+    }
+}
+
+
+
+
+==== applicationContext.xml ====
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <import resource="beansConfig.xml" />
+
+    <!--
+    <context:property-placeholder
+            location="classpath:aa.properties,classpath:bb.properties,classpath:cc.properties"
+            file-encoding="UTF-8" />
+    -->
+    <context:property-placeholder
+            location="classpath:idv/spring/ioc/ch01xml/jdbc.properties"
+            ignore-unresolvable="true"
+            file-encoding="UTF-8" />
+
+
+    <bean id="dataSource" class="idv.spring.ioc.ch01xml.MyBeanPropertiesConfigurer$MyDataSource">
+        <property name="driverClassName" value="${jdbc.driverClassName}" />
+        <property name="url" value="${jdbc.url}" />
+        <property name="username" value="${jdbc.username}" />
+        <property name="password" value="${jdbc.password}" />
+	    <property name="aaaa" value="${aaaa.xxx}" />
+	    <property name="bbbb" value="${bbbb.yyy}" />
+    </bean>
+</beans>
+
+<!--
+==== <beans> ====
+<beans profile=""
+       default-autowire="default"
+       default-autowire-candidates=""
+       default-init-method=""
+       default-destroy-method=""
+       default-lazy-init="default"
+       default-merge="default">
+</beans>
+
+_<beans> 可以設定對整個 BeanFactory / ApplicationContext 的預設行為
+
+==== <import> ====
+<import resource="services.xml" />
+<import resource="resources/messageSource.xml" />
+<import resource="/resources/themeSource.xml" />
+
+In the preceding example, external bean definitions are loaded from three files: services.xml, messageSource.xml, and themeSource.xml.
+All location paths are relative to the definition file doing the importing,
+  so services.xml must be in the same directory or classpath location as the file doing the importing,
+  while messageSource.xml and themeSource.xml must be in a resources location below the location of the importing file.
+As you can see, a leading slash is ignored, but given that these paths are relative, it is better form not to use the slash at all.
+_<import> 的 resource 指定的檔案都是對於這個 applicationContext.xml 的相對路徑，建議不要用 / 開頭
+
+==== <bean> ====
+<bean id="" name="" class="" scope="" autowire="default" lazy-init="default"
+      parent=""
+      primary="true"
+      abstract="true"
+      depends-on=""
+      factory-bean=""
+      factory-method=""
+      autowire-candidate="default"
+      init-method=""
+      destroy-method="">
+
+    <property name="" value="" ref=""></property>
+
+    <constructor-arg index="" name="" type="" value="" ref=""></constructor-arg>
+</bean>
+
+==== <context:property-placeholder /> ====
+The context:property-placeholder tag is used to externalize properties in a separate file.
+It automatically configures PropertyPlaceholderConfigurer, which replaces the ${} placeholders,
+  which are resolved against a specified properties file (as a Spring resource location).
+_參考 http://www.springframework.org/schema/context/spring-context.xsd
+_實做類別為 org.springframework.context.support.PropertySourcesPlaceholderConfigurer
+  
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="locations" value="classpath:idv/spring/ioc/ch01xml/jdbc.properties" />
+
+        _可以設定額外的 properties
+        <property name="properties">
+            <props>
+                <prop key="aaaa.xxx">xxx</prop>
+                <prop key="bbbb.yyy">yyy</prop>
+            </props>
+        </property>
+    </bean>
+
+
+With the context namespace introduced in Spring 2.5, it is possible to configure property placeholders with a dedicated configuration element.
+One or more locations can be provided as a comma-separated list in the location attribute.
+_Spring 2.5 之後，可以用 , 區隔，設定多個 location
+    <context:property-placeholder
+        location="classpath:aa.properties,classpath:bb.properties"
+        file-encoding="UTF-8" />
+-->
+
+
+
+==== beansConfig.xml.txt ====
+<?xml version="1.0" encoding="UTF-8"?>				
+<beans xmlns="http://www.springframework.org/schema/beans"				
+	   xmlns:context="http://www.springframework.org/schema/context"			
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"			
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd			
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">				
+
+    <!-- ==================== dependency injection ==================== -->
+    <bean id="constructorInjection1" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext">
+        <constructor-arg value="bean 1" />
+        <constructor-arg value="2017/01/01" />
+        <constructor-arg value="55" />
+        <constructor-arg value="170" />
+    </bean>
+    <bean id="constructorInjection2" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext">
+        <constructor-arg type="java.lang.String" value="bean 2" />
+        <constructor-arg type="java.util.Date" value="2017/02/01" />
+        <constructor-arg type="double" value="56" />
+        <constructor-arg type="double" value="171" />
+    </bean>
+    <bean id="constructorInjection3" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext">
+        <constructor-arg index="0" value="bean 3" />
+        <constructor-arg index="1" value="2017/03/01" />
+        <constructor-arg index="2" value="57" />
+        <constructor-arg index="3" value="172" />
+    </bean>
+    <bean id="constructorInjection4" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext">
+        <constructor-arg name="name" value="bean 4" />
+        <constructor-arg name="birthday" value="2017/04/01" />
+        <constructor-arg name="weight" value="58" />
+        <constructor-arg name="height" value="173" />
+    </bean>
+    <bean id="constructorInjection5" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext">
+        <constructor-arg ref="ex1" />
+    </bean>
+
+    <bean id="ex1" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Ex">
+        <constructor-arg name="name" value="ex 1" />
+        <constructor-arg name="birthday" value="2017/05/01" />
+        <constructor-arg name="weight" value="59" />
+        <constructor-arg name="height" value="174" />
+    </bean>
+    <bean id="ex2" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Ex">
+        <property name="name" value="ex 2"></property>
+        <property name="birthday" value="2017/04/20"></property>
+        <property name="weight" value="60"></property>
+        <property name="height" value="175"></property>
+    </bean>
+
+    <bean id="setterInjection1" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext">
+        <property name="ex" ref="ex2"></property>
+    </bean>
+
+    <bean id="collections" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext">
+        <property name="prop">
+            <props>
+                <prop key="a">AAA</prop>
+                <prop key="1">111</prop>
+            </props>
+        </property>
+        <property name="list">
+            <list>
+                <value>1</value>
+                <value>2</value>
+            </list>
+        </property>
+        <property name="set">
+            <set>
+                <value>x</value>
+                <value>y</value>
+            </set>
+        </property>
+        <property name="map">
+            <map>
+                <entry key="1" value="John" />
+                <entry key="2" value="Joe" />
+            </map>
+        </property>
+        <property name="array">
+            <list>
+                <value>a</value>
+                <value>b</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="compoundInjection" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext">
+        <constructor-arg name="ex">
+            <bean class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Ex"></bean>
+        </constructor-arg>
+        <property name="ex.name" value="compound" />
+        <property name="ex.birthday" value="2017/05/01" />
+        <property name="ex.weight" value="70" />
+        <property name="ex.height" value="185" />
+    </bean>
+
+    <!-- ==================== scope ==================== -->
+    <bean id="singleton" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton" />
+    <bean id="prototype" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Prototype" scope="prototype" />
+
+    <!-- ==================== lazy ==================== -->
+    <bean id="lazy" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Lazy" lazy-init="true" />
+    <bean id="eager" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Eager" />
+
+    <!-- ==================== autowired ==================== -->
+    <bean id="honda_R18A1" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$R18A1">
+        <property name="type" value="R18A1" />
+    </bean>
+    <bean id="toyota_WW" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$WW">
+        <property name="type" value="WW" />
+    </bean>
+    <bean id="civic" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Honda">
+        <property name="brand" value="Honda" />
+        <property name="engine" ref="honda_R18A1" />
+    </bean>
+    <bean id="altis" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Toyota">
+        <property name="brand" value="Toyota" />
+        <property name="engine" ref="toyota_WW" />
+    </bean>
+    <!-- autowired by name -->
+    <bean id="civicByName" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Honda" autowire="byName">
+        <property name="brand" value="Honda" />
+    </bean>
+    <bean id="engine" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$R18A1">
+        <property name="type" value="R18A1" />
+    </bean>
+    <!-- autowired by type
+    <bean id="civicByType" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Honda" autowire="byType">
+        <property name="brand" value="Honda" />
+    </bean>
+    -->
+
+    <!-- ==================== life cycle ==================== -->
+    <bean id="lifecycle1" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle" />
+    <bean id="lifecycle2" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$LifeCycle"
+          init-method="doInit" destroy-method="doDestroy"/>
+
+    <bean id="logBeanPostProcessor" class="idv.spring.ioc.ch01xml.MyBeanPostProcessor$LogBeanPostProcessor" />
+</beans>
+
+<!--
+==== Constructor-based dependency injection ====
+1. Spring container 無法判斷參數型別，設定錯誤會 org.springframework.beans.factory.UnsatisfiedDependencyException
+2. Spring container 可以藉由type判斷型別，但是有相同型別時無法判斷順序(height = 58, weight = 170)
+3. index is 0 based
+4. Spring 3.0 增加 name 的設定，如果要使用這個設定方式，建構子要加上 @ConstructorProperties()
+   _官方文件看不太懂設定 @ConstructorProperties() 的原因，有 index 和 type 應該就足夠使用了
+5. constructor argument reference other bean
+
+==== bean scopes ====
+_預設為 singleton，使用 scope 屬性設定
+
+  == singleton ==
+  Spring IoC container 只會建立"一個"共用的 bean
+    
+  == prototype ==
+  Spring IoC container 在每次執行 getBean()時，會建立一個全新的 bean
+  Spring 建立 prototype bean 並注入至 client 後，不會管理該 bean 的生命週期，故 client 需要自行管理該 bean
+    (ps. 可以使用 BeanPostProcessor 釋放該 bean 的資源)
+
+    <bean id="singleton" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Singleton" />
+    <bean id="prototype" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Prototype" scope="prototype" />
+
+==== Lazy-initialized beans ====	
+singleton bean 設定 lazy-init，則在 application context 建立時不會接著被初始化
+_但是如果 lazy-init 的 bean 被一個非 lazy-init 的 singleton bean 參考時，則還是會在一開始就一併初始化
+
+    <bean id="lazy" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Lazy" lazy-init="true" />
+    <bean id="eager" class="idv.spring.ioc.ch01xml.MyXmlApplicationContext$Eager" />
+
+
+	
+==== jdbc.properties ====
+jdbc.driverClassName=org.hsqldb.jdbcDriver
+jdbc.url=jdbc:hsqldb:mem:myapp
+jdbc.username=sa
+jdbc.password=
