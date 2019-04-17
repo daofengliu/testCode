@@ -1,14 +1,4 @@
-package idv.spring.ioc.ch03annotation;
-
-import javax.annotation.Resource;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Scope;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-import org.springframework.stereotype.Component;
+package idv.spring.ioc.ch02annotation;
 
 /**
  * ==== Annotation-based configuration ====
@@ -16,7 +6,67 @@ import org.springframework.stereotype.Component;
  *
  * Instead of using XML to describe a bean wiring, you can move the bean configuration into the component class itself
  *   by using annotations on the relevant class, method, or field declaration.
+ * For example:
+ *   Spring 2.0
+ *     @Required
+ *   Spring 2.5
+ *     @Autowired, @Qualifier
+ *     @PostConstruct, @PreDestroy, @Resource (JSR-250, javax.annotation)
+ *   Spring 3.0
+ *     @Primary
+ *     @Inject, @Named (JSR-330, javax.inject)
+ *   Spring 5.0
+ *     @Nullable
  *
+ * As always, you can register them as individual bean definitions,
+ *   but they can also be implicitly registered by including the following tag in an XML-based Spring configuration
+ *
+ *     <context:annotation-config/>
+ *
+ * ==== @Autowired ====
+ * You can apply the @Autowired annotation to fields, constructors, setter methods
+ * By default, Spring resolves @Autowired entries by type.
+ * If more than one beans of the same type are available in the container,
+ *   the framework will throw a fatal exception indicating that more than one bean is available for autowiring.
+ * _@Autowired 是 by type 做 dependency injection (XML 設定可以 byName, byType, constructor)
+ * _若 @Autowired 註解的型別有超過一個以上的 bean，Spring 會拋出 NoUniqueBeanDefinitionException
+ *
+ *  == Autowiring by @Qualifier ==
+ *  This annotation is used to avoid conflicts in bean mapping and we need to provide the bean name that will be used for autowiring.
+ *  This way we can avoid issues where multiple beans are defined for same type.
+ *  This annotation usually works with the @Autowired annotation.
+ *  _@Qualifier 常常會搭配 @Autowired 使用
+ *  _可以避免 @Autowired 做 dependency injection 時，遇到 NoUniqueBeanDefinitionException
+ *
+ *
+ * ps. JSR 330’s @Inject annotation can be used in place of Spring’s @Autowired annotation
+ *     _@Inject 可以取代 @Autowired
+ *
+ * *****************************************************************************
+ * The @Autowired, @Inject, @Value, and @Resource annotations are handled by Spring BeanPostProcessor implementations.
+ * This means that you cannot apply these annotations within your own BeanPostProcessor or BeanFactoryPostProcessor types (if any).
+ * These types must be 'wired up' explicitly by using XML or a Spring @Bean method.
+ * *****************************************************************************
+ *
+ * ==== @Primary ====
+ *
+ * ==== @Required ====
+ * This annotation indicates that the affected bean property must be populated at configuration time,
+ *   through an explicit property value in a bean definition or through autowiring.
+ * The container throws an exception if the affected bean property has not been populated.
+ * This allows for eager and explicit failure, avoiding NullPointerException instances or the like later on.
+ *
+ * ps. The @Required annotation is formally deprecated as of Spring Framework 5.1,
+ *     in favor of using constructor injection for required settings (or a custom implementation of InitializingBean.afterPropertiesSet() along with bean property setter methods).
+ *     _Spring 5.1 已 deprecated
+ *     _對於必須設值的 field，使用 constructor injection 比較好
+ *
+ * *****************************************************************************
+ * ps.
+ *   Annotation injection is performed before XML injection.
+ *   Thus, the XML configuration overrides the annotations for properties wired through both approaches.
+ *   _XML 設定會覆蓋 annotation 設定
+ * *****************************************************************************
  *
  * Spring provides further stereotype annotations: @Component, @Service, and @Controller.
  * @Component is a generic stereotype for any Spring-managed component.
@@ -47,58 +97,26 @@ import org.springframework.stereotype.Component;
  * 1. ch02 使用 annotation，但是 bean 的設定還是在 XML 裡，故使用 @Component 減少在 XML 的設定
  * 2. 在 applicationContext.xml 要設定 <context:component-scan base-package="..." />
  */
-//@Component
-@Component("myComponent")
-@Scope(BeanDefinition.SCOPE_SINGLETON)
-public class AnnotationComponent {
-
-    private static final Logger logger = LoggerFactory.getLogger(AnnotationComponent.class);
-
-    @Resource(name = "myXYZ")
-    private XYZ xyz;
-
-    @Override
-    public String toString() {
-        return "AnnotationComponent{xyz = " + xyz + "}";
-    }
-
-    /**
-     * 使用 @Scope 設定 bean 的 scope
-     */
-    @Component(value = "myXYZ")
-    @Scope(BeanDefinition.SCOPE_PROTOTYPE)
-    public static class XYZ {
-        private String value = "xxx";
-        @Override
-        public String toString() {
-            return "XYZ{value = " + value + "}";
-        }
-    }
-
-    /**
-     * 記得要使用 @Component，要在 applicationContext.xml 設定
-     *   <context:component-scan base-package="idv.spring.ioc.ch03annotation" />
-     *
-     * bean 都透過 @Component annotation 完成設定
-     *
-     * 不過不建議使用 @Component，根據情況使用 @Repository, @Service, @Controller, ...比較好
-     *   @Component – Indicates a auto scan component.
-     *   @Repository – Indicates DAO component in the persistence layer.
-     *   @Service – Indicates a Service component in the business layer.
-     *   @Controller – Indicates a controller component in the presentation layer.
-     */
-    @SuppressWarnings("resource")
-    public static void main(String[] args) {
-        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch03annotation/applicationContext.xml");
-        AnnotationComponent comp1 = ctx.getBean("myComponent", AnnotationComponent.class);
-        logger.info("component is " + comp1);
-
-        AnnotationComponent comp2 = ctx.getBean("myComponent", AnnotationComponent.class);
-        logger.info("test @Scope('singleton') is same bean ? " + (comp1 == comp2));
-
-        AnnotationComponent.XYZ xyz1 = ctx.getBean("myXYZ", AnnotationComponent.XYZ.class);
-        AnnotationComponent.XYZ xyz2 = ctx.getBean("myXYZ", AnnotationComponent.XYZ.class);
-        logger.info("test @Scope('prototype') is same bean ? " + (xyz1 == xyz2));
-    }
-
+public class MyAnnotationBasedApplicationContext {
 }
+
+
+
+
+
+
+201801	2155
+201802	1655
+201803	2450
+201804	2035
+201805	2365
+201806	2470
+201807	1895
+201808	2445
+201809	2385
+201810	1745
+201811	2395
+201812	2205
+201901	2275
+201902	2035
+201903	2015
