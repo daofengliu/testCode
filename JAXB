@@ -1,0 +1,629 @@
+package idv.javase.jaxb;
+
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.*;
+import java.util.Arrays;
+import java.util.List;
+
+/**
+ * ==== @XmlRootElement (Class, Enum) ====
+ * Defines the XML root element.
+ * Top level Java classes or an enum type need to be registered with the JAXB context when it is created.
+ *
+ *     @XmlRootElement(name="", namespace="")
+ *
+ * ==== @XmlAccessorType (Package, Class) ====
+ * Defines the fields and properties of your Java classes that the JAXB engine uses for binding.
+ *
+ *   == XmlAccessType.PROPERTY ==
+ *   Every getter/setter pair in a JAXB-bound class will be automatically bound to XML, unless annotated by XmlTransient.
+ *
+ *   == XmlAccessType.FIELD ==
+ *   Every non static, non transient field in a JAXB-bound class will be automatically bound to XML, unless annotated by XmlTransient.
+ *
+ *   == XmlAccessType.PUBLIC_MEMBER (default) ==
+ *   Every public getter/setter pair and every public field will be automatically bound to XML, unless annotated by XmlTransient.
+ *
+ *   == XmlAccessType.NONE ==
+ *   None of the fields or properties is bound to XML unless they are specifically
+ *
+ * ps. XmlAccessType.PUBLIC_MEMBER，則有 public getter/setter 的 field 不要再用 @XmlElement 或 @XmlAttribute 註解
+ *     XmlAccessType.PROPERTY，則有 getter/setter 的 field 不要再用 @XmlElement 或 @XmlAttribute 註解
+ *       否則會發生 com.sun.xml.internal.bind.v2.runtime.IllegalAnnotationsException: 1 counts of IllegalAnnotationExceptions 類別有相同名稱 "${xxx}" 的兩個特性
+ *
+ * ps. 設定 XmlAccessType.NONE，但是有使用 @XmlElement 或 @XmlAttribute 註解的 field 還是會被映射至 XML
+ *
+ * ==== @XmlAccessorOrder (Package, Class) ====
+ * Defines the sequential order of the children.
+ *
+ *   == XmlAccessOrder.UNDEFINED ==
+ *   _不排序
+ *
+ *   == XmlAccessOrder.ALPHABETICAL ==
+ *   _對 XML element 照字母順序排序
+ *
+ * ==== @XmlType (Class, Enum) ====
+ * Maps a Java class to a schema type.
+ * It defines the type name and order of its children.
+ *
+ *     @XmlType(propOrder = {"", "", ...})
+ *
+ * ==== @XmlElement (Field) ====
+ * Maps a field or property to an XML element
+ *
+ * ps. Java 類別設定 @XmlAccessorType， 根據 XmlAccessType 的值，會自動建立 XML 的 element
+ *     只有 @XmlAccessorType(XmlAccessType.NONE)，才需要對 field 設定 @XmlElement
+ *
+ * ps. XML 的 element 和 field 名稱不同時，使用 @XmlElement(name = "xxx") 設定
+ *
+ * ps. @XmlElement 不能同時和 @XmlTransient 使用
+ *     否則會發生 sun.xml.internal.bind.v2.runtime.IllegalAnnotationsException: 1 counts of IllegalAnnotationExceptions
+ *                idv.javase.jaxb.MyJaxb$Book#price 含有互斥的註解 @javax.xml.bind.annotation.XmlTransient 與 @javax.xml.bind.annotation.XmlElement
+ *
+ * ==== @XmlAttribute (Field) ====
+ * Maps a field or property to an XML attribute
+ *
+ * ==== @XmlValue (Field) ====
+ * Maps a field or property to the text value on an XML tag.
+ *
+ * ==== @XmlTransient (Field) ====
+ * Prevents mapping a field or property to the XML Schema
+ *
+ * ==== @XmlSchema ====
+ * ==== @XmlNs ====
+ * _@see package-info.java
+ *
+ * -------------------- 以下待實做確認 --------------------
+ * ==== @XmlList (Field, Parameter) ====
+ * Maps a collection to a list of values separated by space.
+ *
+ * ==== @XmlElementWrapper (Field) ====
+ * Maps a Java collection to an XML wrapped collection
+ *
+ * ==== XmlJavaTypeAdapter ====
+ * _轉換複雜的 Java object 時，透過一個 Adapter (extends XmlAdapter) 做 XML 轉換
+ *
+ * ==== @XmlElementWrapper ====
+ * ==== @XmlEnum ====
+ * ==== @XmlEnumValue ====
+ */
+public class MyJaxb {
+
+    public enum Type {
+//        HARDBACKS, PAPERBACKS, E_BOOKS;
+        @XmlEnumValue("hardbacks")HARDBACKS,
+        @XmlEnumValue("paperbacks")PAPERBACKS,
+        @XmlEnumValue("eBooks")E_BOOKS;
+    }
+
+    @XmlRootElement(name = "catalog", namespace = "http://www.orangec.idv/catalog")
+    @XmlAccessorType(XmlAccessType.FIELD)
+    @XmlType(propOrder = {"bookList", "books"})
+    public static class BookCatalog {
+        @XmlElement(namespace = "http://www.orangec.idv/books")
+        private Books books;
+        @XmlElement(name = "book")
+        private List<Book> bookList;
+
+        public Books getBooks() {
+            return books;
+        }
+        public void setBooks(Books books) {
+            this.books = books;
+        }
+        public List<Book> getBookList() {
+            return bookList;
+        }
+        public void setBookList(List<Book> bookList) {
+            this.bookList = bookList;
+        }
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class Books {
+        @XmlElement(name = "book")
+        private List<Book> bookList;
+
+        public List<Book> getBookList() {
+            return bookList;
+        }
+        public void setBookList(List<Book> bookList) {
+            this.bookList = bookList;
+        }
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
+    @XmlAccessorOrder(XmlAccessOrder.ALPHABETICAL)
+//    @XmlType(propOrder = {"author", "title", "price", "publishDate", "type"})
+    public static class Book {
+        @XmlAttribute(name = "xsi:type")
+        private String xsiType = "java:idv.javase.jaxb.Book";
+        @XmlAttribute(name = "bid")
+        private String id;
+        @XmlElement(defaultValue = "00000000")
+        private String isbn;
+        @XmlElement
+        private String author;
+        @XmlElement
+        private String title;
+        @XmlElement
+        private double price;
+        @XmlElement(name = "publish_date")
+        private String publishDate;
+        @XmlElement
+        private Type type;
+
+        /* default constructor is required */
+        private Book() {
+        }
+        private Book(String id, String isbn, String author,
+                String title, double price, String publishDate, Type type) {
+            super();
+            this.id = id;
+            this.isbn = isbn;
+            this.author = author;
+            this.title = title;
+            this.price = price;
+            this.publishDate = publishDate;
+            this.type = type;
+        }
+
+        public String getXsiType() {
+            return xsiType;
+        }
+//        public void setXsiType(String xsiType) {
+//            this.xsiType = xsiType;
+//        }
+        public String getId() {
+            return id;
+        }
+        public void setId(String id) {
+            this.id = id;
+        }
+        public String getIsbn() {
+            return isbn;
+        }
+        public void setIsbn(String isbn) {
+            this.isbn = isbn;
+        }
+        public String getAuthor() {
+            return author;
+        }
+        public void setAuthor(String author) {
+            this.author = author;
+        }
+        public String getTitle() {
+            return title;
+        }
+        public void setTitle(String title) {
+            this.title = title;
+        }
+        public double getPrice() {
+            return price;
+        }
+        public void setPrice(double price) {
+            this.price = price;
+        }
+        public String getPublishDate() {
+            return publishDate;
+        }
+        public void setPublishDate(String publishDate) {
+            this.publishDate = publishDate;
+        }
+        public Type getType() {
+            return type;
+        }
+        public void setType(Type type) {
+            this.type = type;
+        }
+    }
+
+
+    /**
+     * ==== package-info.java ====
+     * <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+     * <catalog:catalog xmlns:books="http://www.orangec.idv/books" xmlns:catalog="http://www.orangec.idv/catalog" xmlns:book="http://www.orangec.idv/book" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+     *     <book bid="bk101" xsi:type="java:idv.javase.jaxb.Book">
+     *         <author>Mei</author>
+     *         <isbn>9780080488888</isbn>
+     *         <price>45.95</price>
+     *         <publish_date>2017/11/19</publish_date>
+     *         <title>Java</title>
+     *         <type>paperbacks</type>
+     *     </book>
+     *     <books:books>
+     *         <book bid="bk201" xsi:type="java:idv.javase.jaxb.Book">
+     *             <author>Nancy</author>
+     *             <isbn>9780080486666</isbn>
+     *             <price>40.95</price>
+     *             <publish_date>2017/11/12</publish_date>
+     *             <title>JavaScript</title>
+     *             <type>eBooks</type>
+     *         </book>
+     *     </books:books>
+     * </catalog:catalog>
+     *
+     * ==== no package-info.java ====
+     * <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+     * <ns3:catalog xmlns:ns2="http://www.orangec.idv/books" xmlns:ns3="http://www.orangec.idv/catalog">
+     *     <book bid="bk101" xsi:type="java:idv.javase.jaxb.Book">
+     *         <author>Mei</author>
+     *         <isbn>9780080488888</isbn>
+     *         <price>45.95</price>
+     *         <publish_date>2017/11/19</publish_date>
+     *         <title>Java</title>
+     *         <type>paperbacks</type>
+     *     </book>
+     *     <ns2:books>
+     *         <book bid="bk201" xsi:type="java:idv.javase.jaxb.Book">
+     *             <author>Nancy</author>
+     *             <isbn>9780080486666</isbn>
+     *             <price>40.95</price>
+     *             <publish_date>2017/11/12</publish_date>
+     *             <title>JavaScript</title>
+     *             <type>eBooks</type>
+     *         </book>
+     *     </ns2:books>
+     * </ns3:catalog>
+     *
+     * ps. 如果有 package-info.java，但 prefix 還是錯誤，不確定 JDK 版本是否有影響
+     */
+    public static void main(String[] args) throws JAXBException {
+        JaxbUtil jaxbUtil = new JaxbUtil();
+
+        List<Book> bookList = Arrays.asList(
+                new Book("bk201", "9780080486666", "Nancy", "JavaScript", 40.95, "2017/11/12", Type.E_BOOKS)
+        );
+        Books books = new Books();
+        books.setBookList(bookList);
+
+        List<Book> bookList2 = Arrays.asList(
+                new Book("bk101", "9780080488888", "Mei", "Java", 45.95, "2017/11/19", Type.PAPERBACKS)
+        );
+        BookCatalog catalog = new BookCatalog();
+        catalog.setBooks(books);
+        catalog.setBookList(bookList2);
+        String xml = jaxbUtil.objectToXml(catalog);
+        System.out.println(xml);
+
+        /*
+         * javax.xml.bind.UnmarshalException: unexpected element (uri:"", local:"catalog").
+         *
+         * _@XmlRootElement, @XmlElement 有設定 namespace，XML 轉 Java 必須要有 prefix ??
+         */
+        String xml2 =
+//            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+//            "<catalog>" +
+//                "<book bid=\"bk101\">" +
+//                    "<author>Mei</author>" +
+//                    "<isbn>9780080488888</isbn>" +
+//                    "<price>45.95</price>" +
+//                    "<publish_date>2017/11/19</publish_date>" +
+//                    "<title>Java</title>" +
+//                    "<type>paperbacks</type>" +
+//                "</book>" +
+//            "</catalog>";
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+            "<catalog:catalog xmlns:books=\"http://www.orangec.idv/books\" xmlns:catalog=\"http://www.orangec.idv/catalog\">" +
+                "<book bid=\"bk101\">" +
+                    "<author>Mei</author>" +
+                    "<isbn>9780080488888</isbn>" +
+                    "<price>45.95</price>" +
+                    "<publish_date>2017/11/19</publish_date>" +
+                    "<title>Java</title>" +
+                    "<type>paperbacks</type>" +
+                "</book>" +
+                "<book bid=\"\">" +
+                    "<isbn></isbn>" +
+                    "<price></price>" +
+                 "</book>" +
+            "</catalog:catalog>";
+        /**
+         * _isbn 的設定 @XmlElement(defaultValue = "00000000")
+         * _所以轉換的 object，第二筆 book 的 ISBN 的值為 "00000000"
+         */
+        BookCatalog catalog2 = jaxbUtil.xmlToObject(xml2, BookCatalog.class);
+        System.out.println();
+    }
+
+}
+
+
+
+
+==== package-info.java ====
+@XmlSchema(
+//    namespace = "http://www.orangec.idv/catalog",
+    elementFormDefault = XmlNsForm.QUALIFIED,
+    xmlns = {
+        @XmlNs(prefix = "xsi", namespaceURI = "http://www.w3.org/2001/XMLSchema-instance"),
+        @XmlNs(prefix = "catalog", namespaceURI = "http://www.orangec.idv/catalog"),
+        @XmlNs(prefix = "book", namespaceURI = "http://www.orangec.idv/book"),
+        @XmlNs(prefix = "books", namespaceURI = "http://www.orangec.idv/books")
+    }
+)
+package idv.javase.jaxb;
+
+import javax.xml.bind.annotation.XmlNs;
+import javax.xml.bind.annotation.XmlSchema;
+import javax.xml.bind.annotation.XmlNsForm;
+
+
+
+
+
+
+
+package idv.util.net.http.java.net;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.HttpsURLConnection;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.*;
+
+public class MyHttpClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyHttpClient.class);
+
+    private static final String USER_AGENT = "Mozilla/5.0";
+
+    public enum ContentType {
+        XML("application/xml"),
+        JSON("application/json"),
+        BINARY("application/octet-stream");
+
+        private String val;
+
+        ContentType(String val) {
+            this.val = val;
+        }
+
+        public String getVal() {
+            return val;
+        }
+    }
+
+    public String sendGet(String url) throws Exception {
+        return sendGet(url, null);
+    }
+
+    public String sendGet(String url, String proxyHost, int proxyPort) throws Exception {
+        InetSocketAddress proxyInet = new InetSocketAddress(proxyHost, proxyPort);
+        Proxy proxy = new Proxy(Proxy.Type.HTTP, proxyInet);
+        return sendGet(url, proxy);
+    }
+
+    private String sendGet(String url, Proxy proxy) throws Exception {
+        URL obj = new URL(url);
+        HttpURLConnection conn = (HttpURLConnection) obj.openConnection(proxy);
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("User-Agent", USER_AGENT);
+
+        int responseCode = conn.getResponseCode();
+        LOGGER.info("response code = " + responseCode);
+
+        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        String inputLine;
+        StringBuffer response = new StringBuffer();
+        while ((inputLine = in.readLine()) != null) {
+            response.append(inputLine);
+        }
+        in.close();
+        return response.toString();
+    }
+
+    /**
+     * HTTP POST
+     */
+    public String sendPost(String url, String param, ContentType contentType) throws Exception {
+        return sendPost(url, param, contentType, null);
+    }
+
+    public String sendPost(String url, String param,
+            ContentType contentType, String proxyHost, int proxyPort) throws Exception {
+        InetSocketAddress proxyInet = new InetSocketAddress(proxyHost, proxyPort);
+        Proxy proxy = new Proxy(Proxy.Type.HTTP, proxyInet);
+        return sendPost(url, param, contentType, proxy);
+    }
+
+    private String sendPost(String url, String param, ContentType contentType, Proxy proxy) throws Exception {
+        HttpsURLConnection conn = null;
+
+        String result = "";
+        try {
+            URL reqUrl = new URL(url);
+//            conn = (HttpsURLConnection) reqUrl.openConnection();
+            conn = (HttpsURLConnection) reqUrl.openConnection(proxy);
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", contentType.getVal());
+            conn.setDoOutput(true);
+            OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream());
+            writer.write(param);
+            writer.flush();
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String line;
+            while ((line = in.readLine()) != null) {
+                result += line;
+            }
+            in.close();
+            result = URLDecoder.decode(result, "UTF-8");
+        } catch (Exception ex) {
+            LOGGER.error(ex.getMessage(), ex);
+            throw ex;
+        } finally {
+            conn.disconnect();
+        }
+        return result;
+    }
+
+
+//    public static void main(String[] args) throws Exception {
+////        String result = new MyHttpClient().sendGet("http://www.google.com");
+//        String result = new MyHttpClient().sendGet("http://www.google.com", "cache1", 80);
+//        System.out.println(result);
+//    }
+
+}
+
+
+
+
+
+
+
+
+
+//package idv.util.net.http.apache.components;
+//
+//import idv.util.net.http.java.net.MyHttpClient;
+//import org.apache.commons.lang3.StringUtils;
+//import org.apache.http.HttpHost;
+//import org.apache.http.HttpResponse;
+//import org.apache.http.client.methods.CloseableHttpResponse;
+//import org.apache.http.client.methods.HttpGet;
+//import org.apache.http.client.methods.HttpPost;
+//import org.apache.http.entity.ByteArrayEntity;
+//import org.apache.http.entity.ContentType;
+//import org.apache.http.impl.client.CloseableHttpClient;
+//import org.apache.http.impl.client.HttpClientBuilder;
+//import org.apache.http.impl.conn.DefaultProxyRoutePlanner;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+//
+//import java.io.*;
+//import java.net.InetSocketAddress;
+//import java.net.Proxy;
+//
+///**
+// * <dependency>
+// *     <groupId>org.apache.httpcomponents</groupId>
+// *     <artifactId>httpclient</artifactId>
+// *     <version>4.5.8</version>
+// * </dependency>
+// * <dependency>
+// *     <groupId>org.apache.httpcomponents</groupId>
+// *     <artifactId>httpmime</artifactId>
+// *     <version>4.5.8</version>
+// * </dependency>
+// */
+//public class ApacheHttpClient {
+//
+//    private static final Logger LOGGER = LoggerFactory.getLogger(ApacheHttpClient.class);
+//
+//    private static final String USER_AGENT = "Mozilla/5.0";
+//
+//    /**
+//     * HTTP GET
+//     */
+//    public String sendGet(String url) throws Exception {
+//        return sendGet(url, null);
+//    }
+//
+//    public String sendGet(String url, String proxyHost, int proxyPort) throws Exception {
+//        HttpHost proxy = new HttpHost(proxyHost, proxyPort);
+//        return sendGet(url, proxy);
+//    }
+//
+//    private String sendGet(String url, HttpHost proxy) throws Exception {
+//        DefaultProxyRoutePlanner route = new DefaultProxyRoutePlanner(proxy);
+//        CloseableHttpClient httpClient = HttpClientBuilder.create().setRoutePlanner(route).build();
+//
+//        HttpGet request = new HttpGet(url);
+//        request.addHeader("User-Agent", USER_AGENT);
+//
+//        HttpResponse response = null;
+//        try {
+//            response = httpClient.execute(request);
+//        } catch (IOException ex) {
+//            LOGGER.error(ex.getMessage(), ex);
+//            throw ex;
+//        }
+//
+//        BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+//        StringBuffer result = new StringBuffer();
+//        String line = "";
+//        while ((line = rd.readLine()) != null) {
+//            result.append(line);
+//        }
+//        rd.close();
+//        httpClient.close();
+//        return result.toString();
+//    }
+//
+//    /**
+//     * HTTP POST
+//     */
+//    public HttpResponse sendPost(String url, String param, ContentType contentType) throws Exception {
+//        return sendPost(url, param, contentType, null);
+//    }
+//
+//    public HttpResponse sendPost(String url, String param,
+//            ContentType contentType, String proxyHost, int proxyPort) throws Exception {
+//        HttpHost proxy = new HttpHost(proxyHost, proxyPort);
+//        return sendPost(url, param, contentType, proxy);
+//    }
+//
+//    private HttpResponse sendPost(String url, String param,
+//            ContentType contentType, HttpHost proxy) throws Exception {
+//        DefaultProxyRoutePlanner route = new DefaultProxyRoutePlanner(proxy);
+//        CloseableHttpClient httpClient = HttpClientBuilder.create().setRoutePlanner(route).build();
+//
+//        /* ==== POST with param ==== */
+//        HttpPost httpPost = new HttpPost(url);
+//        httpPost.setHeader("Content-type", contentType.getMimeType());
+//        if (StringUtils.isNotEmpty(param)) {
+//            httpPost.setEntity(new ByteArrayEntity(param.getBytes("UTF-8")));
+//        }
+//        /* ==== POST with param ==== */
+////        List<NameValuePair> params = new ArrayList<NameValuePair>();
+////        params.add(new BasicNameValuePair("username", ${username}));
+////        params.add(new BasicNameValuePair("password", ${password));
+////        httpPost.setEntity(new UrlEncodedFormEntity(params));
+//        /* ==== POST with authorization ==== */
+////        UsernamePasswordCredentials creds = new UsernamePasswordCredentials(${name}, ${password});
+////        httpPost.addHeader(new BasicScheme().authenticate(creds, httpPost, null));
+//        /* ==== POST Multipart ==== */
+////        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+////        builder.addTextBody("username", ${username});
+////        builder.addTextBody("password", ${password);
+////        builder.addBinaryBody("file", new File("test.txt"), ContentType.APPLICATION_OCTET_STREAM, "file.ext");
+//        /* ==== Upload a File using HttpClient ==== */
+////        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+////        builder.addBinaryBody("file", new File("test.txt"), ContentType.APPLICATION_OCTET_STREAM, "file.ext");
+////        HttpEntity multipart = builder.build();
+////        httpPost.setEntity(multipart);
+//
+//        CloseableHttpResponse response = httpClient.execute(httpPost);
+//        int statusCode = response.getStatusLine().getStatusCode();
+//        String message = response.getStatusLine().getReasonPhrase();
+//        String responseString = "";
+//
+////        HttpEntity responseHttpEntity = response.getEntity();
+////        InputStream content = responseHttpEntity.getContent();
+////        BufferedReader buffer = new BufferedReader(new InputStreamReader(content));
+////        String line;
+////        while ((line = buffer.readLine()) != null) {
+////            responseString += line;
+////        }
+////        buffer.close();
+//        httpClient.close();
+//        return response;
+//    }
+//
+//
+//    public static void main(String[] args) throws Exception {
+////        String result = new ApacheHttpClient().sendGet("http://www.google.com");
+//        String result = new ApacheHttpClient().sendGet("http://www.google.com", "cache1", 80);
+//        System.out.println(result);
+//    }
+//
+//}
+
+
