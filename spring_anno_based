@@ -3,7 +3,6 @@ package idv.spring.ioc.ch02annotation;
 /**
  * ==== Annotation-based configuration ====
  * Spring 2.5 introduced support for annotation-based configuration metadata.
- *
  * Instead of using XML to describe a bean wiring, you can move the bean configuration into the component class itself
  *   by using annotations on the relevant class, method, or field declaration.
  * For example:
@@ -18,25 +17,86 @@ package idv.spring.ioc.ch02annotation;
  *   Spring 5.0
  *     @Nullable
  *
- * As always, you can register them as individual bean definitions,
- *   but they can also be implicitly registered by including the following tag in an XML-based Spring configuration
+ * _Spring 2.5 提供 annotation-based 設定，取代使用 XML 描述 bean 的注入關係
+ * _可以使用 @Autowired, @Qualifier, ...以及 JSR-250 annotation 直接設定在 java class
+ * _ps. @see idv.spring.ioc.ch01xml.MyXmlApplicationContext 的 autowired(...)
+ *      _和 idv/spring/ioc/ch01xml/beansConfig.xml 的 == autowired == 設定
  *
- *     <context:annotation-config/>
+ * By default, Spring annotation wiring is not turned on in Spring Framework.
+ * Therefore, you need to enable it before you can use the Spring annotation-based wiring in the Spring Configuration file.
+ *
+ *     <context:annotation-config />
+ *
+ * Once the tag <context:annotation-config /> is configured you have the authority to start annotating your code.
+ * It will indicate that the Spring should automatically wire the values into properties methods and constructors.
+ * _Spring 預設沒有啟動 annotation wiring 功能，必須在 application context XML 設定檔設定 <context:annotation-config />
+ * _Spring 會根據設定在 java class 的 annotation 做 bean 相依的注入
+ * _ps. 但是還是需要自己定義各個 bean，只是 bean 之間的相依的 wiring 由 Spring 處理
+ *
+ * ==== @Required ====
+ * @see - RequiredAnnotationBeanPostProcessor
+ * This annotation indicates that the affected bean property must be populated at configuration time,
+ *   through an explicit property value in a bean definition or through autowiring.
+ * The container throws an exception if the affected bean property has not been populated.
+ * This allows for eager and explicit failure, avoiding NullPointerException instances or the like later on.
+ *
+ * ps. The @Required annotation is formally deprecated as of Spring Framework 5.1,
+ *     in favor of using constructor injection for required settings (or a custom implementation of InitializingBean.afterPropertiesSet() along with bean property setter methods).
+ *     _Spring 5.1 已 deprecated
+ *     _對於必須設值的 field，使用 constructor injection 比較好
+ *
+ *   == field injection ==
+ *   @Autowired
+ *   private FooService fooService;
+ *
+ *   == setter injection ==
+ *   private FooService fooService;
+ *
+ *   @Autowired
+ *   public void setFooService(FooService fooService) {
+ *       this.fooService = fooService
+ *   }
+ *
+ *   == constructor injection ==
+ *   private final FooService fooService;
+ *
+ *   @Autowired
+ *   public MyComponent(FooService fooService) {
+ *       this.fooService = fooService;
+ *   }
+ *
+ * The only way to declare your Service final is by using the constructor injection,
+ *   which replaces the @Required annotation because it forces the user of your class to instantiate it with the required services.
+ * The user does not have to be Spring, it could be a simple unit test as well
+ * You should use constructor injection for mandatory dependencies and setter injections for optional dependencies instead of field injection.
+ * Some reasons why:
+ *   1. It makes it clear to everybody which dependencies are required
+ *   2. It makes testing easier
+ *   3. You can make your objects immutable
+ * _使用 constructor injectioni 是唯一可以宣告 field 為 final 的方式
+ * _對於必要的相依關係，建議使用 constructor injection，對於非必要的相依關係，使用 setter injection
  *
  * ==== @Autowired ====
- * You can apply the @Autowired annotation to fields, constructors, setter methods
+ * You can apply the @Autowired annotation to fields, setter methods, constructors
  * By default, Spring resolves @Autowired entries by type.
  * If more than one beans of the same type are available in the container,
  *   the framework will throw a fatal exception indicating that more than one bean is available for autowiring.
- * _@Autowired 是 by type 做 dependency injection (XML 設定可以 byName, byType, constructor)
- * _若 @Autowired 註解的型別有超過一個以上的 bean，Spring 會拋出 NoUniqueBeanDefinitionException
+ * _@@Autowired 可以用在 field, setter, constructor
+ * _@Autowired 預設為 by type 做 dependency injection (XML 設定可以 byName, byType, constructor)
+ * _若 @Autowired 註解的類別有超過一個以上的 bean，Spring 會拋出 NoUniqueBeanDefinitionException
  *
- *  == Autowiring by @Qualifier ==
- *  This annotation is used to avoid conflicts in bean mapping and we need to provide the bean name that will be used for autowiring.
- *  This way we can avoid issues where multiple beans are defined for same type.
- *  This annotation usually works with the @Autowired annotation.
- *  _@Qualifier 常常會搭配 @Autowired 使用
- *  _可以避免 @Autowired 做 dependency injection 時，遇到 NoUniqueBeanDefinitionException
+ * _ps. @Autowired 實做為 AutowiredAnnotationBeanPostProcessor
+ *      _該類別實做 MergedBeanDefinitionPostProcessor
+ *      _Spring 的 application context 啟動後會執行 AbstractApplicationContext 的 refresh()
+ *      _refresh() 會呼叫 registerBeanPostProcessors(beanFactory) 完成對 AutowiredAnnotationBeanPostProcessor 的註冊
+ *      _refresh() 會呼叫 finishBeanFactoryInitialization(beanFactory) 對非延遲 singleton bean 進行初始化
+ *
+ *   == Autowiring by @Qualifier ==
+ *   This annotation is used to avoid conflicts in bean mapping and we need to provide the bean name that will be used for autowiring.
+ *   This way we can avoid issues where multiple beans are defined for same type.
+ *   This annotation usually works with the @Autowired annotation.
+ *   _@Qualifier 常常會搭配 @Autowired 使用
+ *   _可以避免 @Autowired 做 dependency injection 時，遇到 NoUniqueBeanDefinitionException
  *
  *
  * ps. JSR 330’s @Inject annotation can be used in place of Spring’s @Autowired annotation
@@ -50,16 +110,6 @@ package idv.spring.ioc.ch02annotation;
  *
  * ==== @Primary ====
  *
- * ==== @Required ====
- * This annotation indicates that the affected bean property must be populated at configuration time,
- *   through an explicit property value in a bean definition or through autowiring.
- * The container throws an exception if the affected bean property has not been populated.
- * This allows for eager and explicit failure, avoiding NullPointerException instances or the like later on.
- *
- * ps. The @Required annotation is formally deprecated as of Spring Framework 5.1,
- *     in favor of using constructor injection for required settings (or a custom implementation of InitializingBean.afterPropertiesSet() along with bean property setter methods).
- *     _Spring 5.1 已 deprecated
- *     _對於必須設值的 field，使用 constructor injection 比較好
  *
  * *****************************************************************************
  * ps.
@@ -99,24 +149,3 @@ package idv.spring.ioc.ch02annotation;
  */
 public class MyAnnotationBasedApplicationContext {
 }
-
-
-
-
-
-
-201801	2155
-201802	1655
-201803	2450
-201804	2035
-201805	2365
-201806	2470
-201807	1895
-201808	2445
-201809	2385
-201810	1745
-201811	2395
-201812	2205
-201901	2275
-201902	2035
-201903	2015
