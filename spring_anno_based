@@ -515,7 +515,6 @@ public class MyAnnotationBasedApplicationContext {
 
 
 
-
 //package idv.javaee.servlet.servlet.webxml;
 //
 //import java.io.IOException;
@@ -581,13 +580,13 @@ public class MyAnnotationBasedApplicationContext {
 //        LOGGER.info("Servlet " + this.getServletName() + " has stopped.");
 //    }
 //
-//	/**
-//	 * 如果沒 override doGet()，則 request 是 HTTP GET 時，會發生 HTTP Error 405 Method Not Allowed
-//	 *
-//	 * ==== Using HttpServletRequest ====
-//	 * 1. Getting Request Parameters
-//	 *     GET /hello?user=daniel HTTP/1.1
-//	 *   -> request.getParameter("user");
+//    /**
+//     * 如果沒 override doGet()，則 request 是 HTTP GET 時，會發生 HTTP Error 405 Method Not Allowed
+//     *
+//     * ==== Using HttpServletRequest ====
+//     * 1. Getting Request Parameters
+//     *     GET /hello?user=daniel HTTP/1.1
+//     *   -> request.getParameter("user");
 //     *
 //     * 2. Determining Information about the Request Content
 //     * Several methods are available to help determine the type, length, and encoding of the content of the HTTP request.
@@ -685,7 +684,7 @@ public class MyAnnotationBasedApplicationContext {
 //     * getServletPath()           yes            /test?
 //     * getParameterNames()        yes            [p 2, p 1]
 //     * getParameter("p 1")        yes            c d
-//	 */
+//     */
 //    @Override
 //    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 //        LOGGER.info("==== HelloServlet doGet ====");
