@@ -1,5 +1,15 @@
 package idv.spring.ioc.ch02annotation;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * ==== Annotation-based configuration ====
  * Spring 2.5 introduced support for annotation-based configuration metadata.
@@ -10,7 +20,7 @@ package idv.spring.ioc.ch02annotation;
  *     @Required
  *   Spring 2.5
  *     @Autowired, @Qualifier
- *     @PostConstruct, @PreDestroy, @Resource (JSR-250, javax.annotation)
+ *     @Resource, @PostConstruct, @PreDestroy (JSR-250, javax.annotation)
  *   Spring 3.0
  *     @Primary
  *     @Inject, @Named (JSR-330, javax.inject)
@@ -22,6 +32,7 @@ package idv.spring.ioc.ch02annotation;
  * _ps. @see idv.spring.ioc.ch01xml.MyXmlApplicationContext 的 autowired(...)
  *      _和 idv/spring/ioc/ch01xml/beansConfig.xml 的 == autowired == 設定
  *
+ * ==== Enabling @Autowired Annotations ====
  * By default, Spring annotation wiring is not turned on in Spring Framework.
  * Therefore, you need to enable it before you can use the Spring annotation-based wiring in the Spring Configuration file.
  *
@@ -33,6 +44,25 @@ package idv.spring.ioc.ch02annotation;
  * _Spring 會根據設定在 java class 的 annotation 做 bean 相依的注入
  * _ps. 但是還是需要自己定義各個 bean，只是 bean 之間的相依的 wiring 由 Spring 處理
  *
+ * ps. The implicitly registered post-processors include
+ *       AutowiredAnnotationBeanPostProcessor,
+ *       CommonAnnotationBeanPostProcessor,
+ *       PersistenceAnnotationBeanPostProcessor,
+ *     and the aforementioned
+ *       RequiredAnnotationBeanPostProcessor.
+ *
+ * *****************************************************************************
+ * <context:annotation-config /> only looks for annotations on beans in the same application context in which it is defined.
+ * This means that, if you put <context:annotation-config/> in a WebApplicationContext for a DispatcherServlet,
+ *   it only checks for @Autowired beans in your controllers, and not your services.
+ * _使用 <context:annotation-config /> 只會查找同一個 application context 使用 annotation 宣告的 bean
+ *
+ * Annotation injection is performed before XML injection.
+ * Thus, the XML configuration overrides the annotations for properties wired through both approaches.
+ * _在 XML 和 annotation 有相同 id 的 bean，XML 會覆寫 annotation 的設定
+ * *****************************************************************************
+ *
+ *
  * ==== @Required ====
  * @see - RequiredAnnotationBeanPostProcessor
  * This annotation indicates that the affected bean property must be populated at configuration time,
@@ -40,30 +70,19 @@ package idv.spring.ioc.ch02annotation;
  * The container throws an exception if the affected bean property has not been populated.
  * This allows for eager and explicit failure, avoiding NullPointerException instances or the like later on.
  *
+ *     == setter injection ==
+ *     private FooService fooService;
+ *
+ *     @Required
+ *     public void setFooService(FooService fooService) {
+ *         this.fooService = fooService
+ *     }
+ *
  * ps. The @Required annotation is formally deprecated as of Spring Framework 5.1,
- *     in favor of using constructor injection for required settings (or a custom implementation of InitializingBean.afterPropertiesSet() along with bean property setter methods).
+ *     in favor of using constructor injection for required settings
+ *     (or a custom implementation of InitializingBean.afterPropertiesSet() along with bean property setter methods).
  *     _Spring 5.1 已 deprecated
  *     _對於必須設值的 field，使用 constructor injection 比較好
- *
- *   == field injection ==
- *   @Autowired
- *   private FooService fooService;
- *
- *   == setter injection ==
- *   private FooService fooService;
- *
- *   @Autowired
- *   public void setFooService(FooService fooService) {
- *       this.fooService = fooService
- *   }
- *
- *   == constructor injection ==
- *   private final FooService fooService;
- *
- *   @Autowired
- *   public MyComponent(FooService fooService) {
- *       this.fooService = fooService;
- *   }
  *
  * The only way to declare your Service final is by using the constructor injection,
  *   which replaces the @Required annotation because it forces the user of your class to instantiate it with the required services.
@@ -73,8 +92,9 @@ package idv.spring.ioc.ch02annotation;
  *   1. It makes it clear to everybody which dependencies are required
  *   2. It makes testing easier
  *   3. You can make your objects immutable
- * _使用 constructor injectioni 是唯一可以宣告 field 為 final 的方式
+ * _使用 constructor injection 是唯一可以宣告 field 為 final 的方式
  * _對於必要的相依關係，建議使用 constructor injection，對於非必要的相依關係，使用 setter injection
+ *
  *
  * ==== @Autowired ====
  * You can apply the @Autowired annotation to fields, setter methods, constructors
@@ -85,19 +105,41 @@ package idv.spring.ioc.ch02annotation;
  * _@Autowired 預設為 by type 做 dependency injection (XML 設定可以 byName, byType, constructor)
  * _若 @Autowired 註解的類別有超過一個以上的 bean，Spring 會拋出 NoUniqueBeanDefinitionException
  *
+ *     == field injection ==
+ *     @Autowired
+ *     private FooService fooService;
+ *
+ *     == setter injection ==
+ *     private FooService fooService;
+ *
+ *     @Autowired
+ *     public void setFooService(FooService fooService) {
+ *         this.fooService = fooService
+ *     }
+ *
+ *     == constructor injection ==
+ *     private final FooService fooService;
+ *
+ *     @Autowired
+ *     public MyComponent(FooService fooService) {
+ *         this.fooService = fooService;
+ *     }
+ *
+ *     == @Autowired and Optional Dependencies ==
+ *     @Autowired(required = false)
+ *     private FooService fooService;
+ *
+ *     org.springframework.beans.factory.NoSuchBeanDefinitionException:
+ *       No qualifying bean of type [idv.orangec.FooService] found for dependency:
+ *         expected at least 1 bean which qualifies as autowire candidate for this dependency.
+ *     _避免 Spring context 找不到對應的 bean 做 wiring，設定 @Autowired(required = false)
+ *
+ *
  * _ps. @Autowired 實做為 AutowiredAnnotationBeanPostProcessor
  *      _該類別實做 MergedBeanDefinitionPostProcessor
  *      _Spring 的 application context 啟動後會執行 AbstractApplicationContext 的 refresh()
  *      _refresh() 會呼叫 registerBeanPostProcessors(beanFactory) 完成對 AutowiredAnnotationBeanPostProcessor 的註冊
  *      _refresh() 會呼叫 finishBeanFactoryInitialization(beanFactory) 對非延遲 singleton bean 進行初始化
- *
- *   == Autowiring by @Qualifier ==
- *   This annotation is used to avoid conflicts in bean mapping and we need to provide the bean name that will be used for autowiring.
- *   This way we can avoid issues where multiple beans are defined for same type.
- *   This annotation usually works with the @Autowired annotation.
- *   _@Qualifier 常常會搭配 @Autowired 使用
- *   _可以避免 @Autowired 做 dependency injection 時，遇到 NoUniqueBeanDefinitionException
- *
  *
  * ps. JSR 330’s @Inject annotation can be used in place of Spring’s @Autowired annotation
  *     _@Inject 可以取代 @Autowired
@@ -108,15 +150,68 @@ package idv.spring.ioc.ch02annotation;
  * These types must be 'wired up' explicitly by using XML or a Spring @Bean method.
  * *****************************************************************************
  *
+ * By default, Spring resolves @Autowired entries by type.
+ * If more than one beans of the same type are available in the container, the framework will throw a fatal exception indicating that more than one bean is available for autowiring.
+ * _@Autowired 預設為 by type 做 dependency injection
+ *
+ *
+ * ==== @Qualifier ====
+ * Because autowiring by type may lead to multiple candidates, it is often necessary to have more control over the selection process.
+ * One way to accomplish this is with Spring’s @Qualifier annotation.
+ * This annotation is used to avoid conflicts in bean mapping and we need to provide the bean name that will be used for autowiring.
+ * _@Qualifier 常常會搭配 @Autowired 使用
+ * _可以避免 @Autowired 做 dependency injection 時， 發生 NoUniqueBeanDefinitionException
+ *
+ *   @Autowired              -> by type
+ *   @Autowired + @Qualifier -> by name
+ *
+ *
  * ==== @Primary ====
+ * Because autowiring by type may lead to multiple candidates, it is often necessary to have more control over the selection process.
+ * One way to accomplish this is with Spring’s @Primary annotation.
+ * @Primary indicates that a particular bean should be given preference when multiple beans are candidates to be autowired to a single-valued dependency.
+ * If exactly one primary bean exists among the candidates, it becomes the autowired value.
+ * _使用 by type 的 autowiring 可能遇到多個符合的 bean (org.springframework.beans.factory.NoUniqueBeanDefinitionException)
  *
+ *     @Component("foo1")
+ *     @Primary
+ *     public class Foo {
+ *     }
  *
- * *****************************************************************************
- * ps.
- *   Annotation injection is performed before XML injection.
- *   Thus, the XML configuration overrides the annotations for properties wired through both approaches.
- *   _XML 設定會覆蓋 annotation 設定
- * *****************************************************************************
+ *     @Component("foo2")
+ *     public class Foo {
+ *     }
+ *
+ *     @Service
+ *     public class FooService {
+ *         @Autowired
+ *         private Foo foo;
+ *     }
+ *
+ * In some cases, we need to register more than one bean of the same type.
+ * Spring throws NoUniqueBeanDefinitionException if we try to run the application.
+ *
+ *     @Configuration
+ *     public class FooConfiguration {
+ *         @Bean
+ *         @Primary
+ *         public idv.orangec.Foo firstFoo() { ... }
+ *
+ *         @Bean
+ *         public idv.orangec.Foo secondFoo() { ... }
+ *     }
+ *
+ *     <beans ...>
+ *         <bean class="idv.orangec.Foo" primary="true"></bean>
+ *
+ *         <bean class="idv.orangec.Foo"></bean>
+ *     </beans>
+ *
+ * To access beans with the same type we usually use @Qualifier("beanName") annotation.
+ * We apply it at the injection point along with @Autowired.
+ * In our case, we select the beans at the configuration phase so @Qualifier can’t be applied here.
+ * To resolve this issue Spring offers the @Primary annotation.
+ *
  *
  * Spring provides further stereotype annotations: @Component, @Service, and @Controller.
  * @Component is a generic stereotype for any Spring-managed component.
@@ -148,4 +243,472 @@ package idv.spring.ioc.ch02annotation;
  * 2. 在 applicationContext.xml 要設定 <context:component-scan base-package="..." />
  */
 public class MyAnnotationBasedApplicationContext {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MyAnnotationBasedApplicationContext.class);
+
+    @Autowired
+    @Qualifier("firstFoo")
+    private Foo foo;
+
+    public static class Foo {
+        private String bar;
+
+        public Foo(String bar) {
+            this.bar = bar;
+        }
+    }
+
+    public static void main(String[] args) {
+        new MyAnnotationBasedApplicationContext().testXmlAutowiredQualifier();
+    }
+
+    /**
+     * <beans ...>
+     *     <context:annotation-config />
+     *
+     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+     *         <constructor-arg name="bar" value="1st foo" />
+     *     </bean>
+     *
+     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+     * </beans>
+     *
+     * @Autowired
+     * private Foo foo;
+     *
+     * bean name: org.springframework.context.annotation.internalConfigurationAnnotationProcessor
+     * bean name: org.springframework.context.annotation.internalAutowiredAnnotationProcessor
+     * bean name: org.springframework.context.annotation.internalRequiredAnnotationProcessor
+     * bean name: org.springframework.context.annotation.internalCommonAnnotationProcessor
+     * bean name: org.springframework.context.event.internalEventListenerProcessor
+     * bean name: org.springframework.context.event.internalEventListenerFactory
+     * bean name: firstFoo
+     * bean name: myAnnoCtx
+     */
+    private void testXmlAutowired() {
+        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
+//        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
+        for (String name : ctx.getBeanDefinitionNames()) {
+            LOGGER.info("bean name: " + name);
+        }
+        ((ClassPathXmlApplicationContext) ctx).close();
+    }
+
+    /**
+     * <beans ...>
+     *     <context:annotation-config />
+     *
+     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+     *         <constructor-arg name="bar" value="1st foo" />
+     *     </bean>
+     *     <bean id="secondFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+     *         <constructor-arg name="bar" value="2nd foo" />
+     *     </bean>
+     *
+     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+     * </beans>
+     *
+     * @Autowired
+     * private Foo foo;
+     *
+     * Exception in thread "main" org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext#0': Unsatisfied dependency expressed through field 'foo'; nested exception is org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo' available: expected single matching bean but found 2: firstFoo,secondFoo
+     * 	 at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:587)
+     * 	 at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:91)
+     * 	 at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessPropertyValues(AutowiredAnnotationBeanPostProcessor.java:373)
+     * 	 ...
+     * 	 at org.springframework.context.support.ClassPathXmlApplicationContext.<init>(ClassPathXmlApplicationContext.java:85)
+     * 	 at idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testXmlAutowired2(MyAnnotationBasedApplicationContext.java:301)
+     * 	 at idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.main(MyAnnotationBasedApplicationContext.java:235)
+     * Caused by: org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo' available: expected single matching bean but found 2: firstFoo,secondFoo
+     */
+//    private void testXmlAutowired2() {
+//        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
+////        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
+//        ((ClassPathXmlApplicationContext) ctx).close();
+//    }
+
+    /**
+     * <beans ...>
+     *     <context:annotation-config />
+     *
+     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+     *         <constructor-arg name="bar" value="1st foo" />
+     *     </bean>
+     *     <bean id="secondFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+     *         <constructor-arg name="bar" value="2nd foo" />
+     *     </bean>
+     *
+     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+     * </beans>
+     *
+     * @Autowired
+     * @Qualifier("firstFoo")
+     * private Foo foo;
+     *
+     * bar = 1st foo
+     */
+    private void testXmlAutowiredQualifier() {
+        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
+//        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
+        Foo foo = ctx.getBean("firstFoo", Foo.class);
+        LOGGER.info("bar = " + foo.bar);
+        ((ClassPathXmlApplicationContext) ctx).close();
+    }
+
 }
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config />
+
+    <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+        <constructor-arg name="bar" value="1st foo" />
+    </bean>
+    <bean id="secondFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+        <constructor-arg name="bar" value="2nd foo" />
+    </bean>
+
+    <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+</beans>
+
+
+
+
+
+
+
+
+
+
+
+
+//package idv.javaee.servlet.servlet.webxml;
+//
+//import java.io.*;
+//import java.nio.file.Files;
+//import java.nio.file.Path;
+//
+//import javax.servlet.ServletException;
+//import javax.servlet.http.HttpServlet;
+//import javax.servlet.http.HttpServletRequest;
+//import javax.servlet.http.HttpServletResponse;
+//import javax.servlet.http.Part;
+//
+///**
+// * <servlet>
+// *     <servlet-name>fileUploadServlet</servlet-name>
+// *     <servlet-class>idv.javaee.servlet.servlet.UploadDownloadServlet</servlet-class>
+// *     <multipart-config>
+// *         <location>/tmp</location>
+// *         <max-file-size>20848820</max-file-size>
+// *         <max-request-size>418018841</max-request-size>
+// *         <file-size-threshold>1048576</file-size-threshold>
+// *     </multipart-config>
+// *     <load-on-startup>10</load-on-startup>
+// * </servlet>
+// *
+// *
+// * client JSP -> pages/javaee/servlet/servlet/webxml/fileUpload.jsp
+// */
+//public class UploadDownloadServlet extends HttpServlet {
+//    private static final long serialVersionUID = 1L;
+//
+//    public UploadDownloadServlet() {
+//        super();
+//    }
+//
+////  protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+////  }
+//
+//    @Override
+//    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+//        Part filePart = req.getPart("file");
+//        if (filePart == null || filePart.getSize() == 0) {
+//            res.getWriter().print("No file is uploaded");
+//            res.flushBuffer();
+//            return;
+//        }
+//        InputStream inputStream = filePart.getInputStream();
+//        String fileName = filePart.getSubmittedFileName();
+//
+//        System.out.println(System.getProperty("user.dir"));
+//        File targetPath = new File("download");
+//        if (!targetPath.exists()) {
+//            targetPath.mkdirs();
+//        }
+////        BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(new File(File.separator + "download", fileName)));
+//        BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(new File(targetPath, fileName)));
+//
+//        int read = 0;
+//        final byte[] buffer = new byte[1024];
+//        while ((read = inputStream.read(buffer)) != -1) {
+//            outputStream.write(buffer, 0, read);
+//        }
+//        outputStream.close();
+//        res.getWriter().print("file had been uploaded");
+//    }
+//
+//
+//    private void outputFile(HttpServletResponse res, File file) throws IOException {
+//        Path path = file.toPath();
+//        String mimeType = Files.probeContentType(path);
+//        res.setContentType(mimeType);
+////        res.setHeader("Content-disposition", "attachment; filename=\"" + file.getName() + "\"");
+//
+//        FileInputStream in = null;
+//        OutputStream out = null;
+//        try {
+//            in = new FileInputStream(file);
+//            out = res.getOutputStream();
+//
+//            byte[] buffer = new byte[4096];
+//            int length;
+//            while ((length = in.read(buffer)) > 0){
+//                out.write(buffer, 0, length);
+//            }
+//            in.close();
+//            out.flush();
+//        } catch (IOException ex) {
+////            LOGGER.error(ex.getMessage(), ex);
+//            throw ex;
+//        }
+//    }
+//
+//}
+
+== web.xml ==
+<!-- file upload -->
+<servlet>
+<servlet-name>fileUploadServlet</servlet-name>
+<servlet-class>idv.javaee.servlet.servlet.webxml.UploadDownloadServlet</servlet-class>
+<load-on-startup>10</load-on-startup>
+<multipart-config>
+<location>/tmp</location>
+<max-file-size>20848820</max-file-size>
+<max-request-size>418018841</max-request-size>
+<file-size-threshold>1048576</file-size-threshold>
+</multipart-config>
+</servlet>
+<servlet-mapping>
+<servlet-name>fileUploadServlet</servlet-name>
+<url-pattern>/fileUpload.do</url-pattern>
+</servlet-mapping>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//package idv.javaee.servlet.servlet.webxml;
+//
+//import java.io.IOException;
+//import javax.servlet.ServletException;
+//import javax.servlet.http.Cookie;
+//import javax.servlet.http.HttpServlet;
+//import javax.servlet.http.HttpServletRequest;
+//import javax.servlet.http.HttpServletResponse;
+//
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+//
+///**
+// * ==== Servlet Container ====
+// * 1. Container 的功能
+// *   a. 溝通支援: Container 會和 Web Server 溝通，Container 會知道它和 Web Server 的通訊協定，建立 ServerSocket，偵聽通訊埠，建立串流...
+// *   b. 生命週期管理: Container 控制 Servlet 的生與死，負責載入類別，實例化 Servlet 物件，初始化 Servlet，呼叫 Servlet 的方法，並且適時的讓 Servlet 物件能夠被 garbage collection
+// *   c. 多執行緒支援: Container 接收到一個請求，會自動建立一個 Java 執行緒來處理它，當 Servlet 執行完 service() 方法，該執行緒就會結束 (不過 Servlet 的程式還是要注意執行緒安全)
+// *   d. 宣告式的權限管理: 可以透過 XML 格式的部署描述檔(DD，即 web.xml.txt)來組態或修改權限管理機制，而不用寫在 Servlet 中 (Servlet 3.0 開始可以透過 annotation)
+// *   e. 支援 JSP: Container 會負責把 JSP 轉譯為 Java 程式(Servlet)
+// *
+// * 2. Container & Servlet
+// *   a. Servlet 本身並沒有 main() method, 它們是由另個稱為 container 的 Java 應用程式所控制
+// *   b. 當 web server 接收到一個針對 Servlet 的 request 時，會把這個請求交給該 Servlet 所屬的 Container, Container 建立 HttpServletRequest 以及 HttpServletResponse 物件後,
+// *      再交由 Servlet 處理這個請求  (Container 會呼叫 Servlet 的 service()，service() 會判斷要呼叫 doGet() 或  doPost()...)
+// *
+// * ==== Servlet ====
+// * 1. Servlet<interface> ← GenericServlet<interface> ← HttpServlet<abstract class>
+// * 2. web application 99% 都是繼承 HttpServlet，然後覆寫 doGet() 或 doPost()
+// * 3. lifecycle
+// *   a. init()
+// *      Container 會在 Servlet 物件被建立後，呼叫 init()，將這個物件初始化為可提供服務的 Servlet
+// *   b. service()
+// *      當第一個 client request 被 container 接受到後，Container 啟動一個新的執行緒，再透過它呼叫 Servlet 的 service() ( service() 會再根據 HTTP method，呼叫對應的 doGet(), doPost()... )
+// *   c. doGet() & doPost()
+// *      應用程式的起點，至少要覆寫一個，如果沒覆寫 doGet() 表示不支援 HTTP GET；如果沒覆寫 doPost() 表示不支援 HTTP POST
+// *
+// * ==== ServletContext ====
+// * 1. 每個 web application 只有一個 ServletContext(application context)
+// * 2. 可以取得伺服器的資訊，例如 Container 的資料
+// *
+// * ==== ServletConfig ====
+// * 1. 每個 Servlet 都有一個 ServletConfig 物件
+// * 2. 可以透過 ServletConfig 存取 ServletContext
+// * 3. 可以在 DD(Deployment Descriptor 即 web.xml) 設定 ServletConfig parameter
+// */
+//public class HelloServlet extends HttpServlet {
+//    private static final long serialVersionUID = 1L;
+//
+//    private static final Logger LOGGER = LoggerFactory.getLogger(HelloServlet.class);
+//
+//    public HelloServlet() {
+//        super();
+//    }
+//
+//    @Override
+//    public void init() throws ServletException {
+//        LOGGER.info("Servlet " + this.getServletName() + " has started.");
+//    }
+//
+//    @Override
+//    public void destroy() {
+//        LOGGER.info("Servlet " + this.getServletName() + " has stopped.");
+//    }
+//
+//	/**
+//	 * 如果沒 override doGet()，則 request 是 HTTP GET 時，會發生 HTTP Error 405 Method Not Allowed
+//	 *
+//	 * ==== Using HttpServletRequest ====
+//	 * 1. Getting Request Parameters
+//	 *     GET /hello?user=daniel HTTP/1.1
+//	 *   -> request.getParameter("user");
+//     *
+//     * 2. Determining Information about the Request Content
+//     * Several methods are available to help determine the type, length, and encoding of the content of the HTTP request.
+//     * The getContentType() method returns the MIME content type of the request, such as
+//     *   application/x-www-form-urlencoded, application/json, text/plain, or application/zip, to name a few.
+//     * The getContentLength() and getContentLengthLong() methods both return the number of bytes in the request body (the content length),
+//     *   with the latter method being useful for requests whose content might exceed 2 gigabytes (unusual, but not impossible).
+//     * The getCharacterEncoding() method returns the character encoding (such as UTF-8 or ISO-8859-1) of the request contents whenever the request contains character-type content.
+//     * (text/plain, application/json, and application/ x-www-form-urlencoded are some examples of character-type MIME content types.)
+//     * _可以從 HttpServletRequest 取得 MIME(Multipurpose Internet Mail Extensions) type，MIME 就是 Multipurpose Internet Mail Extensions(text/html...)
+//     *
+//     * 3. Reading the Contents of a Request
+//     * The methods getInputStream(), which returns a javax.servlet.ServletInputStream, and getReader(),
+//     *   which returns a java.io.BufferedReader, can both be used to read the contents of the request.
+//     * You should never use them both on the same request.
+//     * After a call to either method, a call to the other will fail with an IllegalStateException.
+//     * _getInputStream() 可以讀取 binary data
+//     * _getReader() 則是方便處理 character-encoded data
+//     * _不可以同時使用這兩個方法，否則會發生 IllegalStateException
+//     *
+//     * 4. Getting Request Characteristics Such as URL, URI, and Headers
+//     *   == getRequestURL() ==
+//     *   Returns the entire URL that the client used to make the request, including protocol (http or https), server name, port number, and server path but not including the query string.
+//     *
+//     *       ex: http://www.example.org/application/index.jsp.
+//     *
+//     *   == getRequestURI() ==
+//     *   This is slightly different from getRequestURL() in that it returns only the server path part of the URL;
+//     *
+//     *       ex: /application/index.jsp
+//     *
+//     *   == getServletPath() ==
+//     *   Similar to getRequestURI, this returns even less of the URL.
+//     *   If the request is /hello-world/greeting?foo=world, the application is deployed as /hello-world on Tomcat, and the servlet-mappings are /greeting, /salutation, and /wazzup,
+//     *     getServletPath returns only the part of the URL used to match the servlet mapping: /greeting.
+//     *
+//     *   == getHeader() ==
+//     *   Returns the value of a header with the given name.
+//     *   The case of the header does not have to match the case of the string passed into the method, so getHeader("content-type") can match the Content-Type header.
+//     *   If there are multiple headers with the same name, this returns only the first value.
+//     *   In such cases, you would want to use the getHeaders method to return an enumeration of all the values.
+//     *
+//     *   == Sessions ==
+//     *   getSession()
+//     *
+//     *   == Cookies ==
+//     *   getCookies()
+//     *
+//     * ==== Using HttpServletResponse ====
+//     * 1. Writing to the Response Body
+//     * The most common thing you’ll do with a response object, and something you have already done with a response object, is write content to the response body.
+//     * This might be HTML to display in a browser, an image that the browser is retrieving, or the contents of a file that the client is downloading.
+//     * It could be plain text or binary data.
+//     * It might be just a few bytes long or it could be gigabytes long.
+//     *
+//     * The getOutputStream() method, which returns a javax.servlet.ServletOutputStream, and the getWriter() method,
+//     *   which returns a java.io.PrintWriter, both enable you to write data to the response.
+//     * Also, you should never use both getOutputStream() and getWriter() in the same response.
+//     * After a call to one, a call to the other will fail with an IllegalStateException.
+//     * _同樣不能在同一個 response 呼叫 getOutputStream() 和 getWriter()，否則會發生 IllegalStateException
+//     *
+//     * 2. Setting Headers and Other Response Properties
+//     *   == setStatus() ==
+//     *   To set the HTTP response status code
+//     *
+//     *   == getStatus() ==
+//     *   To determine what the current status of the response is
+//     *
+//     *   == sendError() ==
+//     *   To set the status code, indicate an optional error message to write to the response data,
+//     *     direct the web container to provide an error page to the client, and clear the buffer
+//     *
+//     *   == sendRedirect() ==
+//     *   To redirect the client to a different URL
+//     *
+//     * ==== example ====
+//     * http://30thh.loc:8480/app/test%3F/a%3F+b;jsessionid=S%3F+ID?p+1=c+d&p+2=e+f#a
+//     *
+//     * Method                     URL-Decoded    Result
+//     * -------------------------------------------------------------------------
+//     * getContextPath()           no             /app
+//     * getLocalAddr()                            127.0.0.1
+//     * getLocalName()                            30thh.loc
+//     * getLocalPort()                            8480
+//     * getMethod()                               GET
+//     * getPathInfo()              yes            /a?+b
+//     * getProtocol()                             HTTP/1.1
+//     * getQueryString()           no             p+1=c+d&p+2=e+f
+//     * getRequestedSessionId()    no             S%3F+ID
+//     * getRequestURI()            no             /app/test%3F/a%3F+b;jsessionid=S+ID
+//     * getRequestURL()            no             http://30thh.loc:8480/app/test%3F/a%3F+b;jsessionid=S+ID
+//     * getScheme()                               http
+//     * getServerName()                           30thh.loc
+//     * getServerPort()                           8480
+//     * getServletPath()           yes            /test?
+//     * getParameterNames()        yes            [p 2, p 1]
+//     * getParameter("p 1")        yes            c d
+//	 */
+//    @Override
+//    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+//        LOGGER.info("==== HelloServlet doGet ====");
+//        String user = req.getParameter("user");
+//        if (user == null) {
+//            res.getWriter().println("Hello Servlet!");
+//        } else {
+//            res.getWriter().println("Hello " + user);
+//        }
+//    }
+//
+//    /**
+//     * 如果沒 override doPost()，則 request 是 HTTP POST 時，會發生 HTTP Error 405 Method Not Allowed
+//     *
+//     * ==== Using HttpServletRequest ====
+//     * 1. Getting Request Parameters
+//     *   POST /hello HTTP/1.1
+//     *   Host: localhost:8080
+//     *   user=daniel
+//     * -> request.getParameter("user");
+//     */
+////    @Override
+////    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+////    }
+//
+//}
