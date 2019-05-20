@@ -1,363 +1,471 @@
-package idv.spring.ioc.ch02annotation;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
-
-import java.util.HashSet;
-import java.util.Set;
-
-/**
- * ==== Annotation-based configuration ====
- * Spring 2.5 introduced support for annotation-based configuration metadata.
- * Instead of using XML to describe a bean wiring, you can move the bean configuration into the component class itself
- *   by using annotations on the relevant class, method, or field declaration.
- * For example:
- *   Spring 2.0
- *     @Required
- *   Spring 2.5
- *     @Autowired, @Qualifier
- *     @Resource, @PostConstruct, @PreDestroy (JSR-250, javax.annotation)
- *   Spring 3.0
- *     @Primary
- *     @Inject, @Named (JSR-330, javax.inject)
- *   Spring 5.0
- *     @Nullable
- *
- * _Spring 2.5 提供 annotation-based 設定，取代使用 XML 描述 bean 的注入關係
- * _可以使用 @Autowired, @Qualifier, ...以及 JSR-250 annotation 直接設定在 java class
- * _ps. @see idv.spring.ioc.ch01xml.MyXmlApplicationContext 的 autowired(...)
- *      _和 idv/spring/ioc/ch01xml/beansConfig.xml 的 == autowired == 設定
- *
- * ==== Enabling @Autowired Annotations ====
- * By default, Spring annotation wiring is not turned on in Spring Framework.
- * Therefore, you need to enable it before you can use the Spring annotation-based wiring in the Spring Configuration file.
- *
- *     <context:annotation-config />
- *
- * Once the tag <context:annotation-config /> is configured you have the authority to start annotating your code.
- * It will indicate that the Spring should automatically wire the values into properties methods and constructors.
- * _Spring 預設沒有啟動 annotation wiring 功能，必須在 application context XML 設定檔設定 <context:annotation-config />
- * _Spring 會根據設定在 java class 的 annotation 做 bean 相依的注入
- * _ps. 但是還是需要自己定義各個 bean，只是 bean 之間的相依的 wiring 由 Spring 處理
- *
- * ps. The implicitly registered post-processors include
- *       AutowiredAnnotationBeanPostProcessor,
- *       CommonAnnotationBeanPostProcessor,
- *       PersistenceAnnotationBeanPostProcessor,
- *     and the aforementioned
- *       RequiredAnnotationBeanPostProcessor.
- *
- * *****************************************************************************
- * <context:annotation-config /> only looks for annotations on beans in the same application context in which it is defined.
- * This means that, if you put <context:annotation-config/> in a WebApplicationContext for a DispatcherServlet,
- *   it only checks for @Autowired beans in your controllers, and not your services.
- * _使用 <context:annotation-config /> 只會查找同一個 application context 使用 annotation 宣告的 bean
- *
- * Annotation injection is performed before XML injection.
- * Thus, the XML configuration overrides the annotations for properties wired through both approaches.
- * _在 XML 和 annotation 有相同 id 的 bean，XML 會覆寫 annotation 的設定
- * *****************************************************************************
- *
- *
- * ==== @Required ====
- * @see - RequiredAnnotationBeanPostProcessor
- * This annotation indicates that the affected bean property must be populated at configuration time,
- *   through an explicit property value in a bean definition or through autowiring.
- * The container throws an exception if the affected bean property has not been populated.
- * This allows for eager and explicit failure, avoiding NullPointerException instances or the like later on.
- *
- *     == setter injection ==
- *     private FooService fooService;
- *
- *     @Required
- *     public void setFooService(FooService fooService) {
- *         this.fooService = fooService
- *     }
- *
- * ps. The @Required annotation is formally deprecated as of Spring Framework 5.1,
- *     in favor of using constructor injection for required settings
- *     (or a custom implementation of InitializingBean.afterPropertiesSet() along with bean property setter methods).
- *     _Spring 5.1 已 deprecated
- *     _對於必須設值的 field，使用 constructor injection 比較好
- *
- * The only way to declare your Service final is by using the constructor injection,
- *   which replaces the @Required annotation because it forces the user of your class to instantiate it with the required services.
- * The user does not have to be Spring, it could be a simple unit test as well
- * You should use constructor injection for mandatory dependencies and setter injections for optional dependencies instead of field injection.
- * Some reasons why:
- *   1. It makes it clear to everybody which dependencies are required
- *   2. It makes testing easier
- *   3. You can make your objects immutable
- * _使用 constructor injection 是唯一可以宣告 field 為 final 的方式
- * _對於必要的相依關係，建議使用 constructor injection，對於非必要的相依關係，使用 setter injection
- *
- *
- * ==== @Autowired ====
- * You can apply the @Autowired annotation to fields, setter methods, constructors
- * By default, Spring resolves @Autowired entries by type.
- * If more than one beans of the same type are available in the container,
- *   the framework will throw a fatal exception indicating that more than one bean is available for autowiring.
- * _@@Autowired 可以用在 field, setter, constructor
- * _@Autowired 預設為 by type 做 dependency injection (XML 設定可以 byName, byType, constructor)
- * _若 @Autowired 註解的類別有超過一個以上的 bean，Spring 會拋出 NoUniqueBeanDefinitionException
- *
- *     == field injection ==
- *     @Autowired
- *     private FooService fooService;
- *
- *     == setter injection ==
- *     private FooService fooService;
- *
- *     @Autowired
- *     public void setFooService(FooService fooService) {
- *         this.fooService = fooService
- *     }
- *
- *     == constructor injection ==
- *     private final FooService fooService;
- *
- *     @Autowired
- *     public MyComponent(FooService fooService) {
- *         this.fooService = fooService;
- *     }
- *
- *     == @Autowired and Optional Dependencies ==
- *     @Autowired(required = false)
- *     private FooService fooService;
- *
- *     org.springframework.beans.factory.NoSuchBeanDefinitionException:
- *       No qualifying bean of type [idv.orangec.FooService] found for dependency:
- *         expected at least 1 bean which qualifies as autowire candidate for this dependency.
- *     _避免 Spring context 找不到對應的 bean 做 wiring，設定 @Autowired(required = false)
- *
- *
- * _ps. @Autowired 實做為 AutowiredAnnotationBeanPostProcessor
- *      _該類別實做 MergedBeanDefinitionPostProcessor
- *      _Spring 的 application context 啟動後會執行 AbstractApplicationContext 的 refresh()
- *      _refresh() 會呼叫 registerBeanPostProcessors(beanFactory) 完成對 AutowiredAnnotationBeanPostProcessor 的註冊
- *      _refresh() 會呼叫 finishBeanFactoryInitialization(beanFactory) 對非延遲 singleton bean 進行初始化
- *
- * ps. JSR 330’s @Inject annotation can be used in place of Spring’s @Autowired annotation
- *     _@Inject 可以取代 @Autowired
- *
- * *****************************************************************************
- * The @Autowired, @Inject, @Value, and @Resource annotations are handled by Spring BeanPostProcessor implementations.
- * This means that you cannot apply these annotations within your own BeanPostProcessor or BeanFactoryPostProcessor types (if any).
- * These types must be 'wired up' explicitly by using XML or a Spring @Bean method.
- * *****************************************************************************
- *
- * By default, Spring resolves @Autowired entries by type.
- * If more than one beans of the same type are available in the container, the framework will throw a fatal exception indicating that more than one bean is available for autowiring.
- * _@Autowired 預設為 by type 做 dependency injection
- *
- *
- * ==== @Qualifier ====
- * Because autowiring by type may lead to multiple candidates, it is often necessary to have more control over the selection process.
- * One way to accomplish this is with Spring’s @Qualifier annotation.
- * This annotation is used to avoid conflicts in bean mapping and we need to provide the bean name that will be used for autowiring.
- * _@Qualifier 常常會搭配 @Autowired 使用
- * _可以避免 @Autowired 做 dependency injection 時， 發生 NoUniqueBeanDefinitionException
- *
- *   @Autowired              -> by type
- *   @Autowired + @Qualifier -> by name
- *
- *
- * ==== @Primary ====
- * Because autowiring by type may lead to multiple candidates, it is often necessary to have more control over the selection process.
- * One way to accomplish this is with Spring’s @Primary annotation.
- * @Primary indicates that a particular bean should be given preference when multiple beans are candidates to be autowired to a single-valued dependency.
- * If exactly one primary bean exists among the candidates, it becomes the autowired value.
- * _使用 by type 的 autowiring 可能遇到多個符合的 bean (org.springframework.beans.factory.NoUniqueBeanDefinitionException)
- *
- *     @Component("foo1")
- *     @Primary
- *     public class Foo {
- *     }
- *
- *     @Component("foo2")
- *     public class Foo {
- *     }
- *
- *     @Service
- *     public class FooService {
- *         @Autowired
- *         private Foo foo;
- *     }
- *
- * In some cases, we need to register more than one bean of the same type.
- * Spring throws NoUniqueBeanDefinitionException if we try to run the application.
- *
- *     @Configuration
- *     public class FooConfiguration {
- *         @Bean
- *         @Primary
- *         public idv.orangec.Foo firstFoo() { ... }
- *
- *         @Bean
- *         public idv.orangec.Foo secondFoo() { ... }
- *     }
- *
- *     <beans ...>
- *         <bean class="idv.orangec.Foo" primary="true"></bean>
- *
- *         <bean class="idv.orangec.Foo"></bean>
- *     </beans>
- *
- * To access beans with the same type we usually use @Qualifier("beanName") annotation.
- * We apply it at the injection point along with @Autowired.
- * In our case, we select the beans at the configuration phase so @Qualifier can’t be applied here.
- * To resolve this issue Spring offers the @Primary annotation.
- *
- *
- * Spring provides further stereotype annotations: @Component, @Service, and @Controller.
- * @Component is a generic stereotype for any Spring-managed component.
- * @Repository, @Service, and @Controller are specializations of @Component for more
- *   specific use cases, for example, in the persistence, service, and presentation
- *   layers, respectively.
- * Therefore, you can annotate your component classes with @Component, but by
- *   annotating them with @Repository, @Service, or @Controller instead, your
- *   classes are more properly suited for processing by tools or associating with aspects.
- * For example, these stereotype annotations make ideal targets for pointcuts.
- * It is also possible that @Repository, @Service, and @Controller may carry
- *   additional semantics in future releases of the Spring Framework.
- * Thus, if you are choosing between using @Component or @Service for your service
- *   layer, @Service is clearly the better choice.
- * Similarly, as stated above, @Repository is already supported as a marker for
- *   automatic exception translation in your persistence layer.
- *
- *   @Component     generic stereotype for any Spring-managed component
- *   @Repository    stereotype for persistence layer
- *   @Service       stereotype for service layer
- *   @Controller    stereotype for presentation layer (spring-mvc)
- *
- * To autodetect these classes and register the corresponding beans, you need to add
- *   <context:component-scan base-package="..." /> to spring configuration
- *
- *   記得設定 <context:component-scan base-package="idv.spring.ioc.ch03annotation" />
- *
- * 1. ch02 使用 annotation，但是 bean 的設定還是在 XML 裡，故使用 @Component 減少在 XML 的設定
- * 2. 在 applicationContext.xml 要設定 <context:component-scan base-package="..." />
- */
-public class MyAnnotationBasedApplicationContext {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(MyAnnotationBasedApplicationContext.class);
-
-    @Autowired
-    @Qualifier("firstFoo")
-    private Foo foo;
-
-    public static class Foo {
-        private String bar;
-
-        public Foo(String bar) {
-            this.bar = bar;
-        }
-    }
-
-    public static void main(String[] args) {
-        new MyAnnotationBasedApplicationContext().testXmlAutowiredQualifier();
-    }
-
-    /**
-     * <beans ...>
-     *     <context:annotation-config />
-     *
-     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
-     *         <constructor-arg name="bar" value="1st foo" />
-     *     </bean>
-     *
-     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
-     * </beans>
-     *
-     * @Autowired
-     * private Foo foo;
-     *
-     * bean name: org.springframework.context.annotation.internalConfigurationAnnotationProcessor
-     * bean name: org.springframework.context.annotation.internalAutowiredAnnotationProcessor
-     * bean name: org.springframework.context.annotation.internalRequiredAnnotationProcessor
-     * bean name: org.springframework.context.annotation.internalCommonAnnotationProcessor
-     * bean name: org.springframework.context.event.internalEventListenerProcessor
-     * bean name: org.springframework.context.event.internalEventListenerFactory
-     * bean name: firstFoo
-     * bean name: myAnnoCtx
-     */
-    private void testXmlAutowired() {
-        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
-//        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
-        for (String name : ctx.getBeanDefinitionNames()) {
-            LOGGER.info("bean name: " + name);
-        }
-        ((ClassPathXmlApplicationContext) ctx).close();
-    }
-
-    /**
-     * <beans ...>
-     *     <context:annotation-config />
-     *
-     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
-     *         <constructor-arg name="bar" value="1st foo" />
-     *     </bean>
-     *     <bean id="secondFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
-     *         <constructor-arg name="bar" value="2nd foo" />
-     *     </bean>
-     *
-     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
-     * </beans>
-     *
-     * @Autowired
-     * private Foo foo;
-     *
-     * Exception in thread "main" org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext#0': Unsatisfied dependency expressed through field 'foo'; nested exception is org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo' available: expected single matching bean but found 2: firstFoo,secondFoo
-     * 	 at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:587)
-     * 	 at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:91)
-     * 	 at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessPropertyValues(AutowiredAnnotationBeanPostProcessor.java:373)
-     * 	 ...
-     * 	 at org.springframework.context.support.ClassPathXmlApplicationContext.<init>(ClassPathXmlApplicationContext.java:85)
-     * 	 at idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testXmlAutowired2(MyAnnotationBasedApplicationContext.java:301)
-     * 	 at idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.main(MyAnnotationBasedApplicationContext.java:235)
-     * Caused by: org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo' available: expected single matching bean but found 2: firstFoo,secondFoo
-     */
-//    private void testXmlAutowired2() {
+//package idv.spring.ioc.ch02annotation;
+//
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+//import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.beans.factory.annotation.Qualifier;
+//import org.springframework.context.ApplicationContext;
+//import org.springframework.context.support.ClassPathXmlApplicationContext;
+//
+///**
+// * ==== Annotation-based configuration ====
+// * Spring 2.5 introduced support for annotation-based configuration metadata.
+// * Instead of using XML to describe a bean wiring, you can move the bean configuration into the component class itself
+// *   by using annotations on the relevant class, method, or field declaration.
+// * For example:
+// *   Spring 2.0
+// *     @Required
+// *   Spring 2.5
+// *     @Autowired, @Qualifier
+// *     @Resource, @PostConstruct, @PreDestroy (JSR-250, javax.annotation)
+// *   Spring 3.0
+// *     @Primary
+// *     @Inject, @Named (JSR-330, javax.inject)
+// *   Spring 5.0
+// *     @Nullable
+// *
+// * _Spring 2.5 提供 annotation-based 設定，取代使用 XML 描述 bean 的注入關係
+// * _可以使用 @Autowired, @Qualifier, ...以及 JSR-250 annotation 直接設定在 java class
+// * _ps. @see idv.spring.ioc.ch01xml.MyXmlApplicationContext 的 autowired(...)
+// *      _和 idv/spring/ioc/ch01xml/beansConfig.xml 的 == autowired == 設定
+// *
+// * == Enabling @Autowired Annotations ==
+// * By default, Spring annotation wiring is not turned on in Spring Framework.
+// * Therefore, you need to enable it before you can use the Spring annotation-based wiring in the Spring Configuration file.
+// *
+// *     <context:annotation-config />
+// *
+// * Once the tag <context:annotation-config /> is configured you have the authority to start annotating your code.
+// * It will indicate that the Spring should automatically wire the values into properties methods and constructors.
+// * _Spring 預設沒有啟動 annotation wiring 功能，必須在 application context XML 設定檔設定 <context:annotation-config />
+// * _Spring 會根據設定在 java class 的 annotation 做 bean 相依的注入
+// * _ps. 但是還是需要自己定義各個 bean，只是 bean 之間的相依的 wiring 由 Spring 處理
+// *
+// * ps. The implicitly registered post-processors include
+// *       AutowiredAnnotationBeanPostProcessor,
+// *       CommonAnnotationBeanPostProcessor,
+// *       PersistenceAnnotationBeanPostProcessor,
+// *     and the aforementioned
+// *       RequiredAnnotationBeanPostProcessor.
+// * _使用 <context:annotation-config /> 會向 Spring container 註冊上述四個 BeanPostProcessor 實做
+// *
+// * *****************************************************************************
+// * <context:annotation-config /> only looks for annotations on beans in the same application context in which it is defined.
+// * This means that, if you put <context:annotation-config/> in a WebApplicationContext for a DispatcherServlet,
+// *   it only checks for @Autowired beans in your controllers, and not your services.
+// * _使用 <context:annotation-config /> 只會查找同一個 application context 使用 annotation 宣告的 bean
+// *
+// * Annotation injection is performed before XML injection.
+// * Thus, the XML configuration overrides the annotations for properties wired through both approaches.
+// * _在 XML 和 annotation 有相同 id 的 bean，XML 會覆寫 annotation 的設定
+// * *****************************************************************************
+// *
+// *
+// * == @Required ==
+// * @see - RequiredAnnotationBeanPostProcessor
+// * This annotation indicates that the affected bean property must be populated at configuration time,
+// *   through an explicit property value in a bean definition or through autowiring.
+// * The container throws an exception if the affected bean property has not been populated.
+// * This allows for eager and explicit failure, avoiding NullPointerException instances or the like later on.
+// *
+// *     == setter injection ==
+// *     private FooService fooService;
+// *
+// *     @Required
+// *     public void setFooService(FooService fooService) {
+// *         this.fooService = fooService
+// *     }
+// *
+// * The only way to declare your Service final is by using the constructor injection,
+// *   which replaces the @Required annotation because it forces the user of your class to instantiate it with the required services.
+// * The user does not have to be Spring, it could be a simple unit test as well
+// * You should use constructor injection for mandatory dependencies and setter injections for optional dependencies instead of field injection.
+// * Some reasons why:
+// *   1. It makes it clear to everybody which dependencies are required
+// *   2. It makes testing easier
+// *   3. You can make your objects immutable
+// * _使用 constructor injection 是唯一可以宣告 field 為 final 的方式
+// * _對於必要的相依關係，建議使用 constructor injection，對於非必要的相依關係，使用 setter injection
+// *
+// * ps. The @Required annotation is formally deprecated as of Spring Framework 5.1,
+// *     in favor of using constructor injection for required settings
+// *     (or a custom implementation of InitializingBean.afterPropertiesSet() along with bean property setter methods).
+// *     _Spring 5.1 已 deprecated
+// *     _對於必須設值的 field，使用 constructor injection 比較好
+// *
+// * ps. The required attribute of @Autowired is recommended over the @Required annotation.
+// *     The required attribute indicates that the property is not required for autowiring purposes.
+// *     _建議使用 @Autowired(required = [true|false]) 的 required 屬性 取代 @Required
+// *
+// * == @Autowired ==
+// * You can apply the @Autowired annotation to fields, setter methods, constructors
+// * By default, Spring resolves @Autowired entries by type.
+// * If more than one beans of the same type are available in the container,
+// *   the framework will throw a fatal exception indicating that more than one bean is available for autowiring.
+// * _@@Autowired 可以用在 field, setter, constructor
+// * _@Autowired 預設為 by type 做 dependency injection (XML 設定可以 byName, byType, constructor)
+// * _若 @Autowired 註解的類別有超過一個以上的 bean，Spring 會拋出 NoUniqueBeanDefinitionException
+// *
+// *     == field injection ==
+// *     @Autowired
+// *     private FooService fooService;
+// *
+// *     == setter injection ==
+// *     private FooService fooService;
+// *
+// *     @Autowired
+// *     public void setFooService(FooService fooService) {
+// *         this.fooService = fooService
+// *     }
+// *
+// *     == constructor injection ==
+// *     private final FooService fooService;
+// *
+// *     @Autowired
+// *     public MyComponent(FooService fooService) {
+// *         this.fooService = fooService;
+// *     }
+// *
+// *     == @Autowired and Optional Dependencies ==
+// *     @Autowired(required = false)
+// *     private FooService fooService;
+// *
+// *     org.springframework.beans.factory.NoSuchBeanDefinitionException:
+// *       No qualifying bean of type [idv.orangec.FooService] found for dependency:
+// *         expected at least 1 bean which qualifies as autowire candidate for this dependency.
+// *     _避免 Spring context 找不到對應的 bean 做 wiring，設定 @Autowired(required = false)
+// *
+// * *****************************************************************************
+// * The @Autowired, @Inject, @Value, and @Resource annotations are handled by Spring BeanPostProcessor implementations.
+// * This means that you cannot apply these annotations within your own BeanPostProcessor or BeanFactoryPostProcessor types (if any).
+// * These types must be 'wired up' explicitly by using XML or a Spring @Bean method.
+// * *****************************************************************************
+// *
+// * By default, Spring resolves @Autowired entries by type.
+// * If more than one beans of the same type are available in the container, the framework will throw a fatal exception indicating that more than one bean is available for autowiring.
+// * _@Autowired 預設為 by type 做 dependency injection
+// *
+// * _ps. @Autowired 實做為 AutowiredAnnotationBeanPostProcessor
+// *      _該類別實做 MergedBeanDefinitionPostProcessor
+// *      _Spring 的 application context 啟動後會執行 AbstractApplicationContext 的 refresh()
+// *      _refresh() 會呼叫 registerBeanPostProcessors(beanFactory) 完成對 AutowiredAnnotationBeanPostProcessor 的註冊
+// *      _refresh() 會呼叫 finishBeanFactoryInitialization(beanFactory) 對非延遲 singleton bean 進行初始化
+// *
+// * ps. JSR 330’s @Inject annotation can be used in place of Spring’s @Autowired annotation
+// *     _@Inject 可以取代 @Autowired
+// *
+// * ==== @Qualifier ====
+// * Because autowiring by type may lead to multiple candidates, it is often necessary to have more control over the selection process.
+// * One way to accomplish this is with Spring’s @Qualifier annotation.
+// * This annotation is used to avoid conflicts in bean mapping and we need to provide the bean name that will be used for autowiring.
+// * _@Qualifier 常常會搭配 @Autowired 使用
+// * _可以避免 @Autowired 做 dependency injection 時， 發生 NoUniqueBeanDefinitionException
+// *
+// *   @Autowired              -> by type
+// *   @Autowired + @Qualifier -> by name
+// *
+// *
+// * == @Resource ==
+// * Spring also supports injection by using the JSR-250 @Resource annotation (javax.annotation.Resource) on fields or bean property setter methods.
+// * This is a common pattern in Java EE: for example, in JSF-managed beans and JAX-WS endpoints.
+// * Spring supports this pattern for Spring-managed objects as well.
+// *
+// * Resource annotation takes a name attribute.
+// * By default, Spring interprets that value as the bean name to be injected.
+// * If no name is explicitly specified, the default name is derived from the field name or setter method.
+// * In case of a field, it takes the field name.
+// * In case of a setter method, it takes the bean property name.
+// *
+// * _使用 @Resource 而沒使定 name 屬性時
+// *   @Resource
+// *   private ABC abc;
+// *   -> it is equivalent to @Resource(name = "abc")
+// *
+// *   @Resource
+// *   public void setAbc(ABC xyz) {
+// *      abc = xyz;
+// *   }
+// *   -> it is equivalent to @Resource(name = "xyz")
+// *
+// *
+// * == @Inject ==
+// * _使用 @Inject 必須先 include jar
+// *   <dependency>
+// *       <groupId>javax.inject</groupId>
+// *       <artifactId>javax.inject</artifactId>
+// *       <version>1</version>
+// *   </dependency>
+// *
+// * The @Inject annotation belongs to the JSR-330 annotations collection.
+// * This annotation has the following execution paths, listed by precedence
+// *   1. Match by Type
+// *      Unlike the @Resource annotation, which resolves dependencies by name first;
+// *        the default behavior of the @Inject annotation resolves dependencies by type.
+// *
+// *        @Inject
+// *        private Foo foo;
+// *
+// *   2. Match by Qualifier
+// *
+// *        @Inject
+// *        @Qualifier("firstFoo")
+// *        private Foo foo;
+// *
+// *   3. Match by Name
+// *
+// *        @Inject
+// *        @Named("firstFoo")
+// *        private Foo foo;
+// *
+// *
+// * == @Primary ==
+// * Because autowiring by type may lead to multiple candidates, it is often necessary to have more control over the selection process.
+// * One way to accomplish this is with Spring’s @Primary annotation.
+// * @Primary indicates that a particular bean should be given preference when multiple beans are candidates to be autowired to a single-valued dependency.
+// * If exactly one primary bean exists among the candidates, it becomes the autowired value.
+// * _使用 by type 的 autowiring 可能遇到多個符合的 bean (org.springframework.beans.factory.NoUniqueBeanDefinitionException)
+// *
+// *     @Component("foo1")
+// *     @Primary
+// *     public class Foo {
+// *     }
+// *
+// *     @Component("foo2")
+// *     public class Foo {
+// *     }
+// *
+// *     @Service
+// *     public class FooService {
+// *         @Autowired
+// *         private Foo foo;
+// *     }
+// *
+// * In some cases, we need to register more than one bean of the same type.
+// * Spring throws NoUniqueBeanDefinitionException if we try to run the application.
+// *
+// *     @Configuration
+// *     public class FooConfiguration {
+// *         @Bean
+// *         @Primary
+// *         public idv.orangec.Foo firstFoo() { ... }
+// *
+// *         @Bean
+// *         public idv.orangec.Foo secondFoo() { ... }
+// *     }
+// *
+// *     <beans ...>
+// *         <bean class="idv.orangec.Foo" primary="true"></bean>
+// *
+// *         <bean class="idv.orangec.Foo"></bean>
+// *     </beans>
+// *
+// * To access beans with the same type we usually use @Qualifier("beanName") annotation.
+// * We apply it at the injection point along with @Autowired.
+// * In our case, we select the beans at the configuration phase so @Qualifier can’t be applied here.
+// * To resolve this issue Spring offers the @Primary annotation.
+// */
+//public class MyAnnotationBasedApplicationContext {
+//
+//    private static final Logger LOGGER = LoggerFactory.getLogger(MyAnnotationBasedApplicationContext.class);
+//
+//    @Autowired
+//    @Qualifier("firstFoo")
+//    private Foo foo;
+//
+////    @Resource(name = "firstFoo")
+////    private Foo foo;
+//
+//    public static class Foo {
+//        private String bar;
+//
+//        public Foo(String bar) {
+//            this.bar = bar;
+//        }
+//
+//        public String getBar() {
+//            return bar;
+//        }
+//    }
+//
+//    public static void main(String[] args) {
+//        new MyAnnotationBasedApplicationContext().testInjectByAutowired();
+//    }
+//
+//    /**
+//     * 1. AutowiredAnnotationBeanPostProcessor
+//     * <beans ...>
+//     *     <bean class="org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor" />
+//     *
+//     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+//     *         <constructor-arg name="bar" value="1st foo" />
+//     *     </bean>
+//     *
+//     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+//     * </beans>
+//     *
+//     * @Autowired
+//     * private Foo foo;
+//     * -------------------------------------------------------------------------
+//     * org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Mon May 20 15:31:56 CST 2019]; root of context hierarchy
+//     * org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch02annotation/applicationContext.xml]
+//     * org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.<init>(AutowiredAnnotationBeanPostProcessor.java:154) - JSR-330 'javax.inject.Inject' annotation found and supported for autowiring
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:317) - bean name: org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor#0
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:317) - bean name: firstFoo
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:317) - bean name: myAnnoCtx
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:320) - foo.getBar() = 1st foo
+//     * org.springframework.context.support.AbstractApplicationContext.doClose(AbstractApplicationContext.java:989) - Closing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Mon May 20 15:31:56 CST 2019]; root of context hierarchy
+//     *
+//     * ps. 使用 AutowiredAnnotationBeanPostProcessor，沒有支援 @Qualifier
+//     *     若有多個符合 type 的 bean，則會發生 NoUniqueBeanDefinitionException
+//     *     直接使用 <context:annotation-config /> 就好
+//     *
+//     *
+//     * 2. <context:annotation-config />
+//     * <beans ...>
+//     *     <context:annotation-config />
+//     *
+//     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+//     *         <constructor-arg name="bar" value="1st foo" />
+//     *     </bean>
+//     *
+//     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+//     * </beans>
+//     *
+//     * @Autowired
+//     * private Foo foo;
+//     * -------------------------------------------------------------------------
+//     * org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Mon May 20 15:34:08 CST 2019]; root of context hierarchy
+//     * org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch02annotation/applicationContext.xml]
+//     * org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.<init>(AutowiredAnnotationBeanPostProcessor.java:154) - JSR-330 'javax.inject.Inject' annotation found and supported for autowiring
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:339) - bean name: org.springframework.context.annotation.internalConfigurationAnnotationProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:339) - bean name: org.springframework.context.annotation.internalAutowiredAnnotationProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:339) - bean name: org.springframework.context.annotation.internalRequiredAnnotationProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:339) - bean name: org.springframework.context.annotation.internalCommonAnnotationProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:339) - bean name: org.springframework.context.event.internalEventListenerProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:339) - bean name: org.springframework.context.event.internalEventListenerFactory
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:339) - bean name: firstFoo
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:339) - bean name: myAnnoCtx
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByAutowired(MyAnnotationBasedApplicationContext.java:342) - foo.getBar() = 1st foo
+//     * org.springframework.context.support.AbstractApplicationContext.doClose(AbstractApplicationContext.java:989) - Closing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Mon May 20 15:34:08 CST 2019]; root of context hierarchy
+//     *
+//     * ps. 使用 <context:annotation-config /> 可以看到，Spring context 多了
+//     *     ConfigurationAnnotationProcessor, RequiredAnnotationProcessor, CommonAnnotationProcessor, ...
+//     */
+//    private void testInjectByAutowired() {
 //        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
 ////        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
+//        for (String name : ctx.getBeanDefinitionNames()) {
+//            LOGGER.info("bean name: " + name);
+//        }
+//        MyAnnotationBasedApplicationContext myAnnoCtx = ctx.getBean("myAnnoCtx", MyAnnotationBasedApplicationContext.class);
+//        LOGGER.info("foo.getBar() = " + myAnnoCtx.foo.getBar());
 //        ((ClassPathXmlApplicationContext) ctx).close();
 //    }
+//
+//    /**
+//     * <beans ...>
+//     *     <context:annotation-config />
+//     *
+//     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+//     *         <constructor-arg name="bar" value="1st foo" />
+//     *     </bean>
+//     *     <bean id="secondFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+//     *         <constructor-arg name="bar" value="2nd foo" />
+//     *     </bean>
+//     *
+//     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+//     * </beans>
+//     *
+//     * @Autowired
+//     * private Foo foo;
+//     * -------------------------------------------------------------------------
+//     * Exception in thread "main" org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext#0': Unsatisfied dependency expressed through field 'foo'; nested exception is org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo' available: expected single matching bean but found 2: firstFoo,secondFoo
+//     * 	 at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:587)
+//     * 	 at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:91)
+//     * 	 at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessPropertyValues(AutowiredAnnotationBeanPostProcessor.java:373)
+//     * 	 ...
+//     * 	 at org.springframework.context.support.ClassPathXmlApplicationContext.<init>(ClassPathXmlApplicationContext.java:85)
+//     * 	 at idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testXmlAutowired2(MyAnnotationBasedApplicationContext.java:301)
+//     * 	 at idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.main(MyAnnotationBasedApplicationContext.java:235)
+//     * Caused by: org.springframework.beans.factory.NoUniqueBeanDefinitionException: No qualifying bean of type 'idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo' available: expected single matching bean but found 2: firstFoo,secondFoo
+//     */
+////    private void testXmlAutowired2() {
+////        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
+//////        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
+////        ((ClassPathXmlApplicationContext) ctx).close();
+////    }
+//
+//    /**
+//     * <beans ...>
+//     *     <context:annotation-config />
+//     *
+//     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+//     *         <constructor-arg name="bar" value="1st foo" />
+//     *     </bean>
+//     *     <bean id="secondFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+//     *         <constructor-arg name="bar" value="2nd foo" />
+//     *     </bean>
+//     *
+//     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+//     * </beans>
+//     *
+//     * @Autowired
+//     * @Qualifier("firstFoo")
+//     * private Foo foo;
+//     * ----------------------
+//     * bar = 1st foo
+//     */
+//    private void testInjectByAutowiredQualifier() {
+//        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
+////        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
+//        Foo foo = ctx.getBean("firstFoo", Foo.class);
+//        LOGGER.info("bar = " + foo.bar);
+//        ((ClassPathXmlApplicationContext) ctx).close();
+//    }
+//
+//    /**
+//     * <context:annotation-config />
+//     *
+//     * <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+//     *     <constructor-arg name="bar" value="1st foo" />
+//     * </bean>
+//     * <bean id="secondFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
+//     *     <constructor-arg name="bar" value="2nd foo" />
+//     * </bean>
+//     *
+//     * <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
+//     *
+//     * @Resource(name = "firstFoo")
+//     * private Foo foo;
+//     * -------------------------------------------------------------------------
+//     * org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Mon May 20 15:24:28 CST 2019]; root of context hierarchy
+//     * org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch02annotation/applicationContext.xml]
+//     * org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.<init>(AutowiredAnnotationBeanPostProcessor.java:154) - JSR-330 'javax.inject.Inject' annotation found and supported for autowiring
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: org.springframework.context.annotation.internalConfigurationAnnotationProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: org.springframework.context.annotation.internalAutowiredAnnotationProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: org.springframework.context.annotation.internalRequiredAnnotationProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: org.springframework.context.annotation.internalCommonAnnotationProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: org.springframework.context.event.internalEventListenerProcessor
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: org.springframework.context.event.internalEventListenerFactory
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: firstFoo
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: secondFoo
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:410) - bean name: myAnnoCtx
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext.testInjectByResource(MyAnnotationBasedApplicationContext.java:413) - foo.getBar() = 1st foo
+//     */
+//    private void testInjectByResource() {
+//        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
+////        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
+//        for (String name : ctx.getBeanDefinitionNames()) {
+//            LOGGER.info("bean name: " + name);
+//        }
+//        MyAnnotationBasedApplicationContext myAnnoCtx = ctx.getBean("myAnnoCtx", MyAnnotationBasedApplicationContext.class);
+//        LOGGER.info("foo.getBar() = " + myAnnoCtx.foo.getBar());
+//        ((ClassPathXmlApplicationContext) ctx).close();
+//    }
+//
+//}
 
-    /**
-     * <beans ...>
-     *     <context:annotation-config />
-     *
-     *     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
-     *         <constructor-arg name="bar" value="1st foo" />
-     *     </bean>
-     *     <bean id="secondFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
-     *         <constructor-arg name="bar" value="2nd foo" />
-     *     </bean>
-     *
-     *     <bean id="myAnnoCtx" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext" />
-     * </beans>
-     *
-     * @Autowired
-     * @Qualifier("firstFoo")
-     * private Foo foo;
-     *
-     * bar = 1st foo
-     */
-    private void testXmlAutowiredQualifier() {
-        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext.xml");
-//        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext.xml");
-        Foo foo = ctx.getBean("firstFoo", Foo.class);
-        LOGGER.info("bar = " + foo.bar);
-        ((ClassPathXmlApplicationContext) ctx).close();
-    }
-
-}
-
-
+== applicationContext.xml ==
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:context="http://www.springframework.org/schema/context"
@@ -365,6 +473,27 @@ public class MyAnnotationBasedApplicationContext {
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
                            http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
+    <!-- for @Required (Deprecated from Spring 5.1)-->
+    <!--<bean class="org.springframework.beans.factory.annotation.RequiredAnnotationBeanPostProcessor" />-->
+
+    <!-- for @Autowired -->
+    <!--<bean class="org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor" />-->
+
+    <!-- for @ Resource, @PostConstruct, @PreDestroy -->
+    <!--<bean class="org.springframework.context.annotation.CommonAnnotationBeanPostProcessor"/>-->
+
+    <!-- for @PersistenceContext (for injection of the corresponding JPA resources EntityManagerFactory and EntityManager) -->
+    <!--<bean class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />-->
+
+    <!--
+    The implicitly registered post-processors include:
+        AutowiredAnnotationBeanPostProcessor,
+        CommonAnnotationBeanPostProcessor,
+        PersistenceAnnotationBeanPostProcessor,
+        RequiredAnnotationBeanPostProcessor.
+
+    _使用 <context:annotation-config /> 會對 Spring container 註冊上面四個 BeanPostProcessor
+    -->
     <context:annotation-config />
 
     <bean id="firstFoo" class="idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext$Foo">
@@ -379,6 +508,186 @@ public class MyAnnotationBasedApplicationContext {
 
 
 
+
+
+//package idv.spring.ioc.ch02annotation;
+//
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+//import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.context.ApplicationContext;
+//import org.springframework.context.support.ClassPathXmlApplicationContext;
+//import org.springframework.stereotype.Component;
+//import org.springframework.stereotype.Repository;
+//import org.springframework.stereotype.Service;
+//
+//import java.util.Arrays;
+//import java.util.List;
+//
+///**
+// * ==== Automatically Detecting Classes and Registering Bean Definitions ====
+// * Spring 2.5 introduced support for annotation-based configuration metadata.
+// * Instead of using XML to describe a bean wiring, you can move the bean configuration into the component class itself by using annotations on the relevant class, method, or field declaration.
+// * _Spring 2.5 提供 @Autowired 機制，由 Spring container 負責注入 bean 與 bean 之間的相依關係
+// * _但是每個 bean 還是需要個別設定在 XML 裡
+// * 
+// *
+// * Spring provides further stereotype annotations: @Component, @Service, and @Controller.
+// * @Component is a generic stereotype for any Spring-managed component.
+// * @Repository, @Service, and @Controller are specializations of @Component for more specific use cases,
+// *   for example, in the persistence, service, and presentation layers, respectively.
+// * Therefore, you can annotate your component classes with @Component, but by annotating them with @Repository, @Service, or @Controller instead,
+// *   your classes are more properly suited for processing by tools or associating with aspects.
+// *
+// *   @Component     generic stereotype for any Spring-managed component
+// *   @Repository    stereotype for persistence layer
+// *   @Service       stereotype for service layer
+// *   @Controller    stereotype for presentation layer (spring-mvc)
+// *
+// * ==== Using Filters to Customize Scanning ====
+// * @see \main\resources\idv\spring\ioc\ch02annotation\applicationContext2.xml
+// *      <context:include-filter />, <context:exclude-filter />
+// */
+//@Component("myAnnoCtx")
+//public class MyAnnotationBasedApplicationContext2 {
+//
+//    private static final Logger LOGGER = LoggerFactory.getLogger(MyAnnotationBasedApplicationContext2.class);
+//
+//    @Autowired
+//    private FooService fooService;
+//
+//    @Service("fooService")
+//    public static class FooService {
+//
+//        @Autowired
+//        private FooDao fooDao;
+//
+//        public Foo getFoo() {
+//            return fooDao.getFoo();
+//        }
+//
+//        public List<Foo> getFooList() {
+//            return fooDao.getFooList();
+//        }
+//    }
+//
+//    @Repository("fooDao")
+//    public static class FooDao {
+//        public Foo getFoo() {
+//            return new Foo("abc");
+//        }
+//
+//        public List<Foo> getFooList() {
+//            return Arrays.asList(new Foo("abc"), new Foo("xyz"));
+//        }
+//    }
+//
+//    public static class Foo {
+//        private String bar;
+//
+//        public Foo(String bar) {
+//            this.bar = bar;
+//        }
+//
+//        @Override
+//        public String toString() {
+//            return "Foo {bar = " + bar + "}";
+//        }
+//    }
+//
+//    public static void main(String[] args) {
+//        new MyAnnotationBasedApplicationContext2().testComponentScan();
+//    }
+//
+//    /**
+//     * org.springframework.context.support.AbstractApplicationContext.prepareRefresh(AbstractApplicationContext.java:589) - Refreshing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Mon May 20 16:47:14 CST 2019]; root of context hierarchy
+//     * org.springframework.beans.factory.xml.XmlBeanDefinitionReader.loadBeanDefinitions(XmlBeanDefinitionReader.java:316) - Loading XML bean definitions from class path resource [idv/spring/ioc/ch02annotation/applicationContext2.xml]
+//     * org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.<init>(AutowiredAnnotationBeanPostProcessor.java:154) - JSR-330 'javax.inject.Inject' annotation found and supported for autowiring
+//     * idv.spring.ioc.ch02annotation.MyAnnotationBasedApplicationContext2.testComponentScan(MyAnnotationBasedApplicationContext2.java:113) - foo = Foo {bar = abc}
+//     * org.springframework.context.support.AbstractApplicationContext.doClose(AbstractApplicationContext.java:989) - Closing org.springframework.context.support.ClassPathXmlApplicationContext@19bb089b: startup date [Mon May 20 16:47:14 CST 2019]; root of context hierarchy
+//     */
+//    public void testComponentScan() {
+//        ApplicationContext ctx = new ClassPathXmlApplicationContext("idv/spring/ioc/ch02annotation/applicationContext2.xml");
+////        ApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:idv/spring/ioc/ch02annotation/applicationContext2.xml");
+//        MyAnnotationBasedApplicationContext2 myAnnoCtx = ctx.getBean("myAnnoCtx", MyAnnotationBasedApplicationContext2.class);
+//
+//        Foo foo = myAnnoCtx.fooService.getFoo();
+//        LOGGER.info("foo = " + foo);
+//
+//        ((ClassPathXmlApplicationContext) ctx).close();
+//    }
+//
+//}
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--<context:annotation-config />-->
+
+    <!--
+    The use of <context:component-scan> implicitly enables the functionality of <context:annotation-config>.
+    There is usually no need to include the <context:annotation-config> element when using <context:component-scan>
+    _<context:component-scan> 會啟動 <context:annotation-config>，所以不必再設定 <context:annotation-config />
+
+    Filter Type          Example Expression            Description
+    ============================================================================
+    annotation(default)  org.example.SomeAnnotation    An annotation to be present at the type level in target components.
+    assignable           org.example.SomeClass         A class (or interface) that the target components are assignable to (extend or implement).
+    aspectj              org.example..*Service+        An AspectJ type expression to be matched by the target components.
+    regex                org\.example\.Default.*       A regex expression to be matched by the target components class names.
+    custom               org.example.MyTypeFilter      A custom implementation of the org.springframework.core.type.TypeFilter interface.
+
+        <context:component-scan base-package="idv.spring.ioc">
+            <context:include-filter type="regex" expression=".*Stub.*Repository" />
+            <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository" />
+        </context:component-scan>
+    -->
+    <context:component-scan base-package="idv.spring.ioc.ch02annotation">
+        <!--<context:include-filter type="" expression="" />-->
+        <!--<context:exclude-filter type="" expression="" />-->
+    </context:component-scan>
+
+</beans>
+
+
+== applicationContext.xml ==
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <!--<context:annotation-config />-->
+
+    <!--
+    The use of <context:component-scan> implicitly enables the functionality of <context:annotation-config>.
+    There is usually no need to include the <context:annotation-config> element when using <context:component-scan>
+    _<context:component-scan> 會啟動 <context:annotation-config>，所以不必再設定 <context:annotation-config />
+
+    Filter Type          Example Expression            Description
+    ============================================================================
+    annotation(default)  org.example.SomeAnnotation    An annotation to be present at the type level in target components.
+    assignable           org.example.SomeClass         A class (or interface) that the target components are assignable to (extend or implement).
+    aspectj              org.example..*Service+        An AspectJ type expression to be matched by the target components.
+    regex                org\.example\.Default.*       A regex expression to be matched by the target components class names.
+    custom               org.example.MyTypeFilter      A custom implementation of the org.springframework.core.type.TypeFilter interface.
+
+        <context:component-scan base-package="idv.spring.ioc">
+            <context:include-filter type="regex" expression=".*Stub.*Repository" />
+            <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Repository" />
+        </context:component-scan>
+    -->
+    <context:component-scan base-package="idv.spring.ioc.ch02annotation">
+        <!--<context:include-filter type="" expression="" />-->
+        <!--<context:exclude-filter type="" expression="" />-->
+    </context:component-scan>
+
+</beans>
 
 
 
