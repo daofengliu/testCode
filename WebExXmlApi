@@ -1,0 +1,1393 @@
+package idv.library.webex;
+
+import idv.javase.jaxb.JaxbUtil;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.URL;
+import java.net.URLDecoder;
+
+public class CiscoWebExXmlApi {
+    private static final Logger LOGGER = Logger.getLogger(CiscoWebExXmlApi.class);
+
+	/* _實際的 service url 為 https://${siteName}.webex.com/WBXService/XMLService */
+    private static final String WEBEX_SERVICE_URL = "https://api.webex.com/WBXService/XMLService";
+
+//    private static Proxy PROXY;
+//    static {
+//        InetSocketAddress proxyInet = new InetSocketAddress("cache1", 80);
+//        PROXY = new Proxy(Proxy.Type.HTTP, proxyInet);
+//    }
+
+    public enum Result {
+        SUCCESS, FAILURE
+    }
+
+    private JaxbUtil jaxbUtil = new JaxbUtil();
+
+    /**
+     * @param xmlApiUrl  - WebEX API URL
+     * @param sc         - 設定 siteName，webExId，password
+     * @param meetingKey - meeting key
+     * @return GetMeetingResponse
+     * @throws Exception
+     */
+    public GetMeetingResponse getMeetingByKey(String xmlApiUrl,
+            RequestHeader.SecurityContext sc, String meetingKey) throws Exception {
+        LOGGER.info("==== WebExUtil getMeetingByKey ====");
+        checkAuthentication(sc);
+        RequestHeader header = new RequestHeader();
+        header.setSc(sc);
+
+        GetMeetingRequest.BodyContent bc = new GetMeetingRequest.BodyContent();
+        bc.setMeetingKey(meetingKey);
+        GetMeetingRequest.Body body = new GetMeetingRequest.Body();
+        body.setBc(bc);
+        GetMeetingRequest request = new GetMeetingRequest();
+        request.setRequestHeader(header);
+        request.setBody(body);
+
+        GetMeetingResponse response = null;
+        try {
+            String reqXML = new JaxbUtil().objectToXml(request);
+//            LOGGER.info("request XML = " + reqXML);
+            String resXML = sendPost(xmlApiUrl, reqXML);
+//            LOGGER.info("response XML = " + resXML);
+            response = jaxbUtil.xmlToObject(resXML, GetMeetingResponse.class);
+        } catch (JAXBException ex) {
+            LOGGER.error(ex.getMessage(), ex);
+            throw new Exception(ex.getMessage(), ex);
+        }
+        checkResponse(response.getResponseHeader());
+        return response;
+    }
+
+    /**
+     * @param xmlApiUrl - WebEX API URL
+     * @param sc        - 設定 siteName，webExId，password
+     * @param passwd    - meeting password
+     * @param metaData  - meeting meta-data
+     * @param schedule  - meeting schedule
+     * @return CreateMeetingResponse
+     * @throws Exception
+     */
+    public CreateMeetingResponse createMeeting(String xmlApiUrl,
+            RequestHeader.SecurityContext sc, String passwd,
+            CreateMeetingRequest.MetaData metaData,
+            CreateMeetingRequest.Schedule schedule) throws Exception {
+        LOGGER.info("==== WebExUtil createMeeting ====");
+        checkAuthentication(sc);
+        RequestHeader header = new RequestHeader();
+        header.setSc(sc);
+
+        CreateMeetingRequest.AccessControl ac = new CreateMeetingRequest.AccessControl();
+        ac.setMeetingPassword(passwd);
+
+        CreateMeetingRequest.BodyContent bc = new CreateMeetingRequest.BodyContent();
+        bc.setAccessControl(ac);
+        bc.setMetaData(metaData);
+        bc.setSchedule(schedule);
+        CreateMeetingRequest.Body body = new CreateMeetingRequest.Body();
+        body.setBc(bc);
+
+        CreateMeetingRequest request = new CreateMeetingRequest();
+        request.setRequestHeader(header);
+        request.setBody(body);
+
+        CreateMeetingResponse response = null;
+        try {
+            String reqXML = jaxbUtil.objectToXml(request);
+//            LOGGER.info("request XML = " + reqXML);
+            String resXML = sendPost(xmlApiUrl, reqXML);
+//            LOGGER.info("response XML = " + resXML);
+            response = jaxbUtil.xmlToObject(resXML, CreateMeetingResponse.class);
+        } catch (JAXBException ex) {
+            LOGGER.error(ex.getMessage(), ex);
+            throw new Exception(ex.getMessage(), ex);
+        }
+        checkResponse(response.getResponseHeader());
+        return response;
+    }
+
+    /**
+     * <securityContext>
+     *     <siteName>${siteName}</siteName>
+     *     <webExID>${webExID}</webExID>
+     *     <password>${password}</password>
+     * </securityContext>
+     *
+     * is required
+     */
+    private boolean checkAuthentication(RequestHeader.SecurityContext sc) throws Exception {
+        if (sc == null ||
+                StringUtils.isEmpty(sc.getSiteName()) ||
+                StringUtils.isEmpty(sc.getWebExId()) ||
+                StringUtils.isEmpty(sc.getPassword())) {
+            String msg = "Please fill up WebEX SecurityContext fields.";
+            LOGGER.error(msg);
+            throw new Exception(msg);
+        }
+        return true;
+    }
+
+    private void checkResponse(ResponseHeader header) throws Exception {
+        if (!Result.SUCCESS.name().equals(header.getRes().getResult())) {
+            throw new Exception(header.getRes().toString());
+        }
+    }
+
+    /** send HTTP Post request */
+    private String sendPost(String url, String param) throws Exception {
+        HttpsURLConnection conn = null;
+
+        String resXML = "";
+        try {
+            URL reqUrl = new URL(null,url,new sun.net.www.protocol.https.Handler());
+//            conn = (HttpsURLConnection) reqUrl.openConnection(PROXY);
+            conn = (HttpsURLConnection) reqUrl.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/xml; charset=utf-8");
+            conn.setDoOutput(true);
+            conn.connect();
+            OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream());
+            writer.write(param);
+            writer.flush();
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            String line;
+            while ((line = in.readLine()) != null) {
+                resXML += line;
+            }
+            in.close();
+            resXML = URLDecoder.decode(resXML, "UTF-8");
+        } catch (Exception ex) {
+            LOGGER.error(ex.getMessage(), ex);
+            throw new Exception(ex.getMessage(), ex);
+        } finally {
+            conn.disconnect();
+        }
+        return resXML;
+    }
+
+    /** test */
+    public static void main(String[] args) throws Exception {
+        CiscoWebExXmlApi util = new CiscoWebExXmlApi();
+
+        RequestHeader.SecurityContext sc = new RequestHeader.SecurityContext();
+        sc.setSiteName("${siteName}");
+        sc.setWebExId("${webExId}");
+        sc.setPassword("${password}");
+
+        /* test to get meeting by key */
+//        GetMeetingResponse res = util.getMeetingByKey(WEBEX_SERVICE_URL, sc, "579842754");
+
+        /* test to create meeting */
+        String passwd = "test123";
+        CreateMeetingRequest.MetaData metaData = new CreateMeetingRequest.MetaData();
+        metaData.setConfName("test WebEX creating meeting");
+        metaData.setGreeting("hello WebEX");
+        CreateMeetingRequest.Schedule schedule = new CreateMeetingRequest.Schedule();
+        schedule.setStartDate("05/02/2019 10:00:00");
+        schedule.setOpenTime(CreateMeetingRequest.OpenTime.FIVE);
+        schedule.setDuration(60);
+        CreateMeetingResponse res3 = util.createMeeting(
+                WEBEX_SERVICE_URL, sc, passwd, metaData, schedule);
+
+        System.out.println();
+    }
+
+    /**
+     * <header>
+     *     <securityContext>
+     *         <siteName>${siteName}</siteName>
+     *         <webExID>${webExID}</webExID>
+     *         <password>${password}</password>
+     *     </securityContext>
+     * </header>
+     */
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class RequestHeader {
+        @XmlElement(name = "securityContext")
+        private SecurityContext sc;
+
+        public SecurityContext getSc() {
+            return sc;
+        }
+        public void setSc(SecurityContext sc) {
+            this.sc = sc;
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class SecurityContext {
+            @XmlElement
+            private String siteName;
+            @XmlElement(name = "webExID")
+            private String webExId;
+            @XmlElement
+            private String password;
+
+            public String getSiteName() {
+                return siteName;
+            }
+            public void setSiteName(String siteName) {
+                this.siteName = siteName;
+            }
+            public String getWebExId() {
+                return webExId;
+            }
+            public void setWebExId(String webExId) {
+                this.webExId = webExId;
+            }
+            public String getPassword() {
+                return password;
+            }
+            public void setPassword(String password) {
+                this.password = password;
+            }
+        }
+
+        public static RequestHeader getTestHeader() {
+            SecurityContext sc = new RequestHeader.SecurityContext();
+            sc.setSiteName("${siteName}");
+            sc.setWebExId("${WebExId}");
+            sc.setPassword("${password}");
+
+            RequestHeader headerRequest = new RequestHeader();
+            headerRequest.setSc(sc);
+            return headerRequest;
+        }
+    }
+
+    /**
+     * <header>
+     *     <response>
+     *         <result>SUCCESS</result>
+     *         <gsbStatus>PRIMARY</gsbStatus>
+     *     </response>
+     * </header>
+     *
+     * <header>
+     *     <response>
+     *         <result>FAILURE</result>
+     *         <reason>validation: unable to add orderAD to &lt;order></reason>
+     *         <gsbStatus>PRIMARY</gsbStatus>
+     *         <exceptionID>999999</exceptionID>
+     *     </response>
+     * </header>
+     */
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class ResponseHeader {
+        @XmlElement(name = "response")
+        private Response res;
+
+        public Response getRes() {
+            return res;
+        }
+        public void setRes(Response res) {
+            this.res = res;
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class Response {
+            @XmlElement
+            private String result;
+            @XmlElement
+            private String gsbStatus;
+            @XmlElement
+            private String reason;
+            @XmlElement(name = "exceptionID")
+            private String exceptionId;
+
+            public String getResult() {
+                return result;
+            }
+            public void setResult(String result) {
+                this.result = result;
+            }
+            public String getGsbStatus() {
+                return gsbStatus;
+            }
+            public void setGsbStatus(String gsbStatus) {
+                this.gsbStatus = gsbStatus;
+            }
+            public String getReason() {
+                return reason;
+            }
+            public void setReason(String reason) {
+                this.reason = reason;
+            }
+            public String getExceptionId() {
+                return exceptionId;
+            }
+            public void setExceptionId(String exceptionId) {
+                this.exceptionId = exceptionId;
+            }
+
+            @Override
+            public String toString() {
+                return "Response {result = " + result +
+                        ", gsbStatus = " + gsbStatus +
+                        ", reason = " + reason +
+                        ", exceptionId = " + exceptionId + "}";
+            }
+        }
+    }
+
+    /**
+     * <?xml version="1.0" encoding="ISO-8859-1"?>
+     * <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+     *     <header>
+     *         <securityContext>
+     *             <siteName>${siteName}</siteName>
+     *             <webExID>${webExID}</webExID>
+     *             <password>${password}</password>
+     *         </securityContext>
+     *     </header>
+     *     <body>
+     *         <bodyContent xsi:type="java:com.webex.service.binding.meeting.GetMeeting">
+     *             <meetingKey>571631322</meetingKey>
+     *         </bodyContent>
+     *     </body>
+     * </message>
+     */
+    @XmlRootElement(name = "message")
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class GetMeetingRequest {
+        @XmlElement(name = "header")
+        private RequestHeader requestHeader;
+        @XmlElement(name = "body")
+        private Body body;
+
+        public RequestHeader getRequestHeader() {
+            return requestHeader;
+        }
+        public void setRequestHeader(RequestHeader requestHeader) {
+            this.requestHeader = requestHeader;
+        }
+        public Body getBody() {
+            return body;
+        }
+        public void setBody(Body body) {
+            this.body = body;
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class Body {
+            @XmlElement(name = "bodyContent")
+            private BodyContent bc;
+
+            public BodyContent getBc() {
+                return bc;
+            }
+            public void setBc(BodyContent bc) {
+                this.bc = bc;
+            }
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class BodyContent {
+            @XmlAttribute(name = "xsi:type")
+            private String xsiType = "java:com.webex.service.binding.meeting.GetMeeting";
+            @XmlElement
+            private String meetingKey;
+
+            public String getXsiType() {
+                return xsiType;
+            }
+//            public void setXsiType(String xsiType) {
+//                this.xsiType = xsiType;
+//            }
+            public String getMeetingKey() {
+                return meetingKey;
+            }
+            public void setMeetingKey(String meetingKey) {
+                this.meetingKey = meetingKey;
+            }
+        }
+
+        /**
+         * <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+         * <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+         *     <header>
+         *         <securityContext>
+         *             <siteName>${siteName}</siteName>
+         *             <webExID>${webExID}</webExID>
+         *             <password>${password}</password>
+         *         </securityContext>
+         *     </header>
+         *     <body>
+         *         <bodyContent xsi:type="java:com.webex.service.binding.meeting.GetMeetingRequest">
+         *             <meetingKey>572026453</meetingKey>
+         *         </bodyContent>
+         *     </body>
+         * </message>
+         */
+        public static void main(String[] args) throws JAXBException {
+            RequestHeader requestHeader = RequestHeader.getTestHeader();
+            BodyContent bc = new BodyContent();
+            bc.setMeetingKey("572026453");
+            Body body = new Body();
+            body.setBc(bc);
+
+            GetMeetingRequest getMeeting = new GetMeetingRequest();
+            getMeeting.setRequestHeader(requestHeader);
+            getMeeting.setBody(body);
+
+            String xml = new JaxbUtil().objectToXml(getMeeting);
+            System.out.println(xml);
+        }
+    }
+
+    /**
+     * <?xml version="1.0" encoding="ISO-8859-1"?>
+     * <serv:message xmlns:serv="http://www.webex.com/schemas/2002/06/service"
+     *               xmlns:com="http://www.webex.com/schemas/2002/06/common"
+     *               xmlns:meet="http://www.webex.com/schemas/2002/06/service/meeting"
+     *               xmlns:att="http://www.webex.com/schemas/2002/06/service/attendee">
+     *     <serv:header>
+     *         <serv:response>
+     *             <serv:result>SUCCESS</serv:result>
+     *             <serv:gsbStatus>PRIMARY</serv:gsbStatus>
+     *         </serv:response>
+     *     </serv:header>
+     *     <serv:body>
+     *         <serv:bodyContent xsi:type="meet:getMeetingResponse" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+     *             <meet:accessControl>
+     *                 <meet:listToPublic>false</meet:listToPublic>
+     *                 <meet:isPublic>false</meet:isPublic>
+     *                 <meet:meetingPassword>123456</meet:meetingPassword>
+     *             </meet:accessControl>
+     *             <meet:metaData>
+     *                 ...
+     *             </meet:metaData>
+     *             <meet:participants>
+     *                 <meet:maxUserNumber>4</meet:maxUserNumber>
+     *                 <meet:attendees>
+     *                     <meet:attendee>
+     *                         ...
+     *                     </meet:attendee>
+     *                     ...
+     *                 </meet:attendees>
+     *             </meet:participants>
+     *             <meet:enableOptions>
+     *                 ...
+     *             </meet:enableOptions>
+     *             <meet:schedule>
+     *                 ...
+     *             </meet:schedule>
+     *             <meet:telephony>
+     *                 ...
+     *             </meet:telephony>
+     *             <meet:tracking />
+     *             <meet:repeat>
+     *                 <meet:repeatType>NO_REPEAT</meet:repeatType>
+     *             </meet:repeat>
+     *             <meet:remind>
+     *                 ...
+     *             </meet:remind>
+     *             <meet:attendeeOptions>
+     *                 ...
+     *             </meet:attendeeOptions>
+     *             <meet:meetingkey>48591508</meet:meetingkey>
+     *             <meet:status>NOT_INPROGRESS</meet:status>
+     *             <meet:hostJoined>false</meet:hostJoined>
+     *             <meet:participantsJoined>false</meet:participantsJoined>
+     *             <meet:hostKey>885837</meet:hostKey>
+     *             <meet:eventID>10764972</meet:eventID>
+     *             <meet:hostType>1001001</meet:hostType>
+     *         </serv:bodyContent>
+     *     </serv:body>
+     * </serv:message>
+     */
+    @XmlRootElement(name = "message", namespace = "http://www.webex.com/schemas/2002/06/service")
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class GetMeetingResponse {
+        @XmlElement(name = "header")
+        private ResponseHeader responseHeader;
+        @XmlElement(name = "body")
+        private Body body;
+
+        public ResponseHeader getResponseHeader() {
+            return responseHeader;
+        }
+        public void setResponseHeader(ResponseHeader responseHeader) {
+            this.responseHeader = responseHeader;
+        }
+        public Body getBody() {
+            return body;
+        }
+        public void setBody(Body body) {
+            this.body = body;
+        }
+
+        @XmlRootElement(namespace = "http://www.webex.com/schemas/2002/06/service")
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class Body {
+            @XmlElement(name = "bodyContent")
+            private BodyContent bc;
+
+            public BodyContent getBc() {
+                return bc;
+            }
+            public void setBc(BodyContent bc) {
+                this.bc = bc;
+            }
+        }
+
+        @XmlRootElement(namespace = "http://www.webex.com/schemas/2002/06/service")
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class BodyContent {
+            @XmlAttribute(name = "xsi:type")
+            private String xsiType = "meet:getMeetingResponse";
+            @XmlElement
+            private AccessControl accessControl;
+            @XmlElement
+            private MetaData metaData;
+            @XmlElement
+            private String meetingLink;
+
+            public String getMeetingLink() {
+                return meetingLink;
+            }
+            public void setMeetingLink(String meetingLink) {
+                this.meetingLink = meetingLink;
+            }
+            public String getXsiType() {
+                return xsiType;
+            }
+            public void setXsiType(String xsiType) {
+                this.xsiType = xsiType;
+            }
+            public AccessControl getAccessControl() {
+                return accessControl;
+            }
+            public void setAccessControl(AccessControl accessControl) {
+                this.accessControl = accessControl;
+            }
+            public MetaData getMetaData() {
+                return metaData;
+            }
+            public void setMetaData(MetaData metaData) {
+                this.metaData = metaData;
+            }
+        }
+
+        @XmlRootElement(namespace = "http://www.webex.com/schemas/2002/06/service/meeting")
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class AccessControl {
+            @XmlElement
+            private String listToPublic;
+            @XmlElement
+            private boolean isPublic;
+            @XmlElement
+            private String meetingPassword;
+
+            public String getListToPublic() {
+                return listToPublic;
+            }
+            public void setListToPublic(String listToPublic) {
+                this.listToPublic = listToPublic;
+            }
+            public boolean isPublic() {
+                return isPublic;
+            }
+            public void setPublic(boolean aPublic) {
+                isPublic = aPublic;
+            }
+            public String getMeetingPassword() {
+                return meetingPassword;
+            }
+            public void setMeetingPassword(String meetingPassword) {
+                this.meetingPassword = meetingPassword;
+            }
+        }
+
+        @XmlRootElement(namespace = "http://www.webex.com/schemas/2002/06/service/meeting")
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class MetaData {
+            @XmlElement
+            private String confName;
+            @XmlElement
+            private String meetingType;
+            @XmlElement
+            private String agenda;
+            @XmlElement
+            private String invitation;
+            @XmlElement
+            private boolean isInternal;
+
+            public String getConfName() {
+                return confName;
+            }
+            public void setConfName(String confName) {
+                this.confName = confName;
+            }
+            public String getMeetingType() {
+                return meetingType;
+            }
+            public void setMeetingType(String meetingType) {
+                this.meetingType = meetingType;
+            }
+            public String getAgenda() {
+                return agenda;
+            }
+            public void setAgenda(String agenda) {
+                this.agenda = agenda;
+            }
+            public String getInvitation() {
+                return invitation;
+            }
+            public void setInvitation(String invitation) {
+                this.invitation = invitation;
+            }
+            public boolean isInternal() {
+                return isInternal;
+            }
+            public void setInternal(boolean internal) {
+                isInternal = internal;
+            }
+        }
+    }
+
+    /**
+     * ==== exceptions ====
+     * 1. The user or site does not support this meeting type (1, 2)
+     *    ps. <meetingType> = 1, 2, 3, 4
+     * ==== configuration ====
+     * <schedule>
+     *   <duration>
+     *     The duration of the meeting in minutes.
+     *     Default is 60.
+     *     Must be no more than the MaxMeetingDuration, which has been set by the WebEx administrator and is defined in the Super Admin Site.
+     *     ps. maxMeetingDuration, default is 999999
+     *   <openTime>
+     *     Integer.
+     *     Valid values are 0, 5*60, 10*60, and 15*60
+     *   <timeZoneID>
+     *     45 = GMT+08:00, China (Beijing)
+     *     48 = GMT+08:00, Taipei (Hong Kong)
+     *     49 = GMT+09:00, Tokyo (Tokyo)
+     *
+     * == create meeting ==
+     * <?xml version="1.0" encoding="ISO-8859-1"?>
+     * <message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+     *     <header>
+     *         <securityContext>
+     *             <siteName>${siteName}</siteName>
+     *             <webExID>${webExID}</webExID>
+     *             <password>${password}</password>
+     *         </securityContext>
+     *     </header>
+     *     <body>
+     *         <bodyContent xsi:type="java:com.webex.service.binding.meeting.CreateMeeting">
+     *             <accessControl>
+     *                 <meetingPassword>123123</meetingPassword>
+     *             </accessControl>
+     *             <metaData>
+     *                 <confName>Test Creating Meeting</confName>
+     *                 <meetingType>3</meetingType>
+     *                 <agenda>Test</agenda>
+     *             </metaData>
+     *             <participants>
+     *                 <maxUserNumber>4</maxUserNumber>
+     *                 <attendees>
+     *                     ...
+     *                 </attendees>
+     *             </participants>
+     *             <schedule>
+     *                 <!-- Date format should be MM/dd/yyyy HH:mm:ss -->
+     *                 <startDate>04/18/2019 13:30:00</startDate>
+     *                 <openTime>900</openTime>
+     *                 <duration>20</duration>
+     *                 <timeZoneID>48</timeZoneID>
+     *             </schedule>
+     *         </bodyContent>
+     *     </body>
+     * </message>
+     */
+    @XmlRootElement(name = "message")
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class CreateMeetingRequest {
+        public static enum MeetingType {
+            @XmlEnumValue("1")MC_PRO(1),
+            @XmlEnumValue("2")MC_STD(2),
+            @XmlEnumValue("3")MC_FRE(3),
+            @XmlEnumValue("4")NONE(4);
+
+            private int type;
+
+            MeetingType(int type) {
+                this.type = type;
+            }
+
+            public int getType() {
+                return type;
+            }
+        }
+
+        public static enum OpenTime {
+            @XmlEnumValue("0")ZERO(0),
+            @XmlEnumValue("300")FIVE(5 * 60),
+            @XmlEnumValue("600")TEN(10 * 60),
+            @XmlEnumValue("900")FIFTEEN(15 * 60);
+
+            private int time;
+
+            OpenTime(int time) {
+                this.time = time;
+            }
+
+            public int getTime() {
+                return time;
+            }
+        }
+
+        public enum TimeZone {
+            @XmlEnumValue("41")INDIA(41),
+            @XmlEnumValue("45")CHINA(45),
+            @XmlEnumValue("48")TAIPEI(48),
+            @XmlEnumValue("49")TOKYO(49),
+            @XmlEnumValue("50")KOREA(50);
+
+            private int id;
+
+            TimeZone(int id) {
+                this.id = id;
+            }
+            public int getId() {
+                return id;
+            }
+        }
+
+        @XmlElement(name = "header")
+        private RequestHeader requestHeader;
+        @XmlElement(name = "body")
+        private Body body;
+
+        public RequestHeader getRequestHeader() {
+            return requestHeader;
+        }
+        public void setRequestHeader(RequestHeader requestHeader) {
+            this.requestHeader = requestHeader;
+        }
+        public Body getBody() {
+            return body;
+        }
+        public void setBody(Body body) {
+            this.body = body;
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class Body {
+            @XmlElement(name = "bodyContent")
+            private BodyContent bc;
+
+            public void setBc(BodyContent bc) {
+                this.bc = bc;
+            }
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class BodyContent {
+            @XmlAttribute(name = "xsi:type")
+            private String xsiType = "java:com.webex.service.binding.meeting.CreateMeeting";
+            @XmlElement
+            private AccessControl accessControl;
+            @XmlElement
+            private MetaData metaData;
+            @XmlElement
+            private Schedule schedule;
+
+            public String getXsiType() {
+                return xsiType;
+            }
+            public AccessControl getAccessControl() {
+                return accessControl;
+            }
+            public void setAccessControl(AccessControl accessControl) {
+                this.accessControl = accessControl;
+            }
+            public MetaData getMetaData() {
+                return metaData;
+            }
+            public void setMetaData(MetaData metaData) {
+                this.metaData = metaData;
+            }
+            public Schedule getSchedule() {
+                return schedule;
+            }
+            public void setSchedule(Schedule schedule) {
+                this.schedule = schedule;
+            }
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class AccessControl {
+            @XmlElement
+            private String meetingPassword;
+
+            public String getMeetingPassword() {
+                return meetingPassword;
+            }
+            public void setMeetingPassword(String meetingPassword) {
+                this.meetingPassword = meetingPassword;
+            }
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class MetaData {
+            @XmlElement
+            private String confName;
+            @XmlElement
+            private String agenda;
+            @XmlElement
+            private String greeting;
+            @XmlElement
+            private String location;
+
+            public String getConfName() {
+                return confName;
+            }
+            public void setConfName(String confName) {
+                this.confName = confName;
+            }
+            public String getAgenda() {
+                return agenda;
+            }
+            public void setAgenda(String agenda) {
+                this.agenda = agenda;
+            }
+            public String getGreeting() {
+                return greeting;
+            }
+            public void setGreeting(String greeting) {
+                this.greeting = greeting;
+            }
+            public String getLocation() {
+                return location;
+            }
+            public void setLocation(String location) {
+                this.location = location;
+            }
+        }
+
+        @XmlRootElement
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class Schedule {
+            @XmlElement
+            private String startDate;
+            @XmlElement
+            private int duration;
+            @XmlElement
+            private OpenTime openTime = OpenTime.ZERO;
+            @XmlElement
+            private TimeZone timeZoneID;
+
+            public String getStartDate() {
+                return startDate;
+            }
+            public void setStartDate(String startDate) {
+                this.startDate = startDate;
+            }
+            public int getDuration() {
+                return duration;
+            }
+            public void setDuration(int duration) {
+                this.duration = duration;
+            }
+            public OpenTime getOpenTime() {
+                return openTime;
+            }
+            public void setOpenTime(OpenTime openTime) {
+                this.openTime = openTime;
+            }
+            public TimeZone getTimeZoneID() {
+                return timeZoneID;
+            }
+            public void setTimeZoneID(TimeZone timeZoneID) {
+                this.timeZoneID = timeZoneID;
+            }
+        }
+
+        /**
+         * <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+         * <message xmlns:com="http://www.webex.com/schemas/2002/06/common" xmlns:att="http://www.webex.com/schemas/2002/06/service/attendee" xmlns:serv="http://www.webex.com/schemas/2002/06/service" xmlns:meet="http://www.webex.com/schemas/2002/06/service/meeting" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+         *     <header>
+         *         <securityContext>
+         *             <siteName>${siteName}</siteName>
+         *             <webExID>${webExId}</webExID>
+         *             <password>${password}</password>
+         *         </securityContext>
+         *     </header>
+         *     <body>
+         *         <bodyContent xsi:type="java:com.webex.service.binding.meeting.CreateMeeting">
+         *             <accessControl>
+         *                 <meetingPassword>123123</meetingPassword>
+         *             </accessControl>
+         *             <metaData>
+         *                 <confName>test 123</confName>
+         *                 <agenda>Test</agenda>
+         *             </metaData>
+         *             <schedule>
+         *                 <startDate>05/14/2019 14:00:00</startDate>
+         *                 <duration>30</duration>
+         *                 <openTime>600</openTime>
+         *             </schedule>
+         *         </bodyContent>
+         *     </body>
+         * </message>
+         */
+        public static void main(String[] args) throws JAXBException {
+            RequestHeader requestHeader = RequestHeader.getTestHeader();
+
+            AccessControl accessControl = new AccessControl();
+            accessControl.setMeetingPassword("123123");
+
+            MetaData metaData = new MetaData();
+            metaData.setConfName("test 123");
+
+            Schedule schedule = new Schedule();
+            schedule.setStartDate("05/14/2019 14:00:00");
+            schedule.setOpenTime(OpenTime.TEN);
+            schedule.setDuration(30);
+
+            BodyContent bc = new BodyContent();
+            bc.setAccessControl(accessControl);
+            bc.setMetaData(metaData);
+            bc.setSchedule(schedule);
+            Body body = new Body();
+            body.setBc(bc);
+
+            CreateMeetingRequest createMeeting = new CreateMeetingRequest();
+            createMeeting.setRequestHeader(requestHeader);
+            createMeeting.setBody(body);
+
+            String xml = new JaxbUtil().objectToXml(createMeeting);
+            System.out.println(xml);
+        }
+    }
+
+    /**
+     * <serv:message xmlns:serv="http://www.webex.com/schemas/2002/06/service" xmlns:com="http://www.webex.com/schemas/2002/06/common" xmlns:meet="http://www.webex.com/schemas/2002/06/service/meeting" xmlns:att="http://www.webex.com/schemas/2002/06/service/attendee">
+     *    <serv:header>
+     *       <serv:response>
+     *          <serv:result>SUCCESS</serv:result>
+     *          <serv:gsbStatus>PRIMARY</serv:gsbStatus>
+     *       </serv:response>
+     *    </serv:header>
+     *    <serv:body>
+     *       <serv:bodyContent xsi:type="meet:createMeetingResponse" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+     *          <meet:meetingkey>573913957</meet:meetingkey>
+     *          <meet:iCalendarURL>
+     *             <serv:host>https://${siteName}.webex.com/${siteName}/j.php?MTID=m102e4345120e81344b3f9eae86950fd2</serv:host>
+     *             <serv:attendee>https://${siteName}.webex.com/${siteName}/j.php?MTID=m0ff714868d572c0c3d650a0264e8a177</serv:attendee>
+     *          </meet:iCalendarURL>
+     *          <meet:guestToken>9e8d05fdab5cd942112777b2478ff030</meet:guestToken>
+     *       </serv:bodyContent>
+     *    </serv:body>
+     * </serv:message>
+     */
+    @XmlRootElement(name = "message", namespace = "http://www.webex.com/schemas/2002/06/service")
+    @XmlAccessorType(XmlAccessType.FIELD)
+    public static class CreateMeetingResponse {
+        @XmlElement(name = "header")
+        private ResponseHeader responseHeader;
+        @XmlElement(name = "body")
+        private Body body;
+
+        public ResponseHeader getResponseHeader() {
+            return responseHeader;
+        }
+        public void setResponseHeader(ResponseHeader responseHeader) {
+            this.responseHeader = responseHeader;
+        }
+        public Body getBody() {
+            return body;
+        }
+        public void setBody(Body body) {
+            this.body = body;
+        }
+
+        @XmlRootElement(namespace = "http://www.webex.com/schemas/2002/06/service")
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class Body {
+            @XmlElement(name = "bodyContent")
+            private BodyContent bc;
+
+            public void setBc(BodyContent bc) {
+                this.bc = bc;
+            }
+            public BodyContent getBc() {
+                return bc;
+            }
+        }
+
+        @XmlRootElement(namespace = "http://www.webex.com/schemas/2002/06/service")
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class BodyContent {
+            @XmlAttribute(name = "xsi:type")
+            private String xsiType = "meet:createMeetingResponse";
+            @XmlElement
+            private String meetingkey;
+            @XmlElement
+            private ICalendarURL iCalendarURL;
+            @XmlElement
+            private String guestToken;
+
+            public String getXsiType() {
+                return xsiType;
+            }
+            public void setXsiType(String xsiType) {
+                this.xsiType = xsiType;
+            }
+            public String getMeetingkey() {
+                return meetingkey;
+            }
+            public void setMeetingkey(String meetingkey) {
+                this.meetingkey = meetingkey;
+            }
+            public ICalendarURL getiCalendarURL() {
+                return iCalendarURL;
+            }
+            public void setiCalendarURL(ICalendarURL iCalendarURL) {
+                this.iCalendarURL = iCalendarURL;
+            }
+            public String getGuestToken() {
+                return guestToken;
+            }
+            public void setGuestToken(String guestToken) {
+                this.guestToken = guestToken;
+            }
+        }
+
+        @XmlRootElement(namespace = "http://www.webex.com/schemas/2002/06/service/meeting")
+        @XmlAccessorType(XmlAccessType.FIELD)
+        public static class ICalendarURL {
+            @XmlElement
+            private String host;
+            @XmlElement
+            private String attendee;
+
+            public String getHost() {
+                return host;
+            }
+            public void setHost(String host) {
+                this.host = host;
+            }
+            public String getAttendee() {
+                return attendee;
+            }
+            public void setAttendee(String attendee) {
+                this.attendee = attendee;
+            }
+        }
+
+
+        /**
+         * testing
+         */
+        public static void main(String[] args) throws JAXBException {
+            String xml =
+                    "<serv:message xmlns:serv=\"http://www.webex.com/schemas/2002/06/service\" xmlns:com=\"http://www.webex.com/schemas/2002/06/common\" xmlns:meet=\"http://www.webex.com/schemas/2002/06/service/meeting\" xmlns:att=\"http://www.webex.com/schemas/2002/06/service/attendee\">" +
+                        "<serv:header>" +
+                            "<serv:response>" +
+                                "<serv:result>SUCCESS</serv:result>" +
+                                "<serv:gsbStatus>PRIMARY</serv:gsbStatus>" +
+                            "</serv:response>" +
+                        "</serv:header>" +
+                        "<serv:body>" +
+                            "<serv:bodyContent xsi:type=\"meet:createMeetingResponse\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">" +
+                                "<meet:meetingkey>573913957</meet:meetingkey>" +
+                                "<meet:iCalendarURL>" +
+                                    "<serv:host>https://${siteName}.webex.com/${siteName}/j.php?MTID=m102e4345120e81344b3f9eae86950fd2</serv:host>" +
+                                    "<serv:attendee>https://${siteName}.webex.com/${siteName}/j.php?MTID=m0ff714868d572c0c3d650a0264e8a177</serv:attendee>" +
+                                "</meet:iCalendarURL>" +
+                                "<meet:guestToken>9e8d05fdab5cd942112777b2478ff030</meet:guestToken>" +
+                            "</serv:bodyContent>" +
+                        "</serv:body>" +
+                    "</serv:message>";
+            CreateMeetingResponse res = new JaxbUtil().xmlToObject(xml, CreateMeetingResponse.class);
+            System.out.println(res);
+        }
+    }
+}
+
+
+
+
+@XmlSchema(
+    namespace = "",
+    elementFormDefault = XmlNsForm.QUALIFIED,
+    xmlns = {
+        @XmlNs(prefix = "xsi", namespaceURI = "http://www.w3.org/2001/XMLSchema-instance"),
+        @XmlNs(prefix = "serv", namespaceURI = "http://www.webex.com/schemas/2002/06/service"),
+        @XmlNs(prefix = "com", namespaceURI = "http://www.webex.com/schemas/2002/06/common"),
+        @XmlNs(prefix = "meet", namespaceURI = "http://www.webex.com/schemas/2002/06/service/meeting"),
+        @XmlNs(prefix = "att", namespaceURI = "http://www.webex.com/schemas/2002/06/service/attendee")
+    }
+)
+package idv.library.webex;
+
+import javax.xml.bind.annotation.XmlNs;
+import javax.xml.bind.annotation.XmlNsForm;
+import javax.xml.bind.annotation.XmlSchema;
+
+
+
+
+
+
+
+
+==== URL API ====
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebEX Login</title>
+</head>
+<body>
+
+<div align="center">
+    <table border="0" width="60%" cellspacing="0" cellpadding="0">
+        <tr>
+            <td width="100%" colspan="2" align="center">Partner Page (p.php) - Partner Login</td>
+        </tr>
+        <!--
+        user 輸入 meeting key，server 用 GetMeeting API 查詢 meeting 取得 response 的 <meet:meetingLink>
+        回傳此頁面，並把 <meet:meetingLink> 的值做為 <input type="hidden" name="MU" /> 的值
+        -->
+        <form name="login" method="POST" action="https://${siteName}.webex.com/${siteName}/p.php">
+            <input type="hidden" name="AT" value="LI">
+            <input type="hidden" name="WID" value="${WebExId}">
+            <input type="hidden" name="PW" value="${password}">
+			<input type="hidden" name="MU" value="https://${siteName}.webex.com/${siteName}/j.php?MTID=m37f11f0836f2b95517b0b554db7ea373">
+            <tr>
+                <td width="50%" align="right">&nbsp;</td>
+                <td width="50%" valign="baseline">&nbsp;</td>
+            </tr>
+        </form>
+    </table>
+</div>
+
+<!--
+====  WebEx-hosted website’s homepage ====
+https://${siteName}.webex.com/
+
+==== to call a PHP page on your organization’s WebEx-hosted website, you must append your PHP command to the following URL ====
+https://${siteName}.webex.com/${siteName}/
+
+==== Syntax for requesting a service ====
+https://${siteName}.webex.com/${siteName}/m.php?AT=${command}
+
+  1. ${siteName}.webex.com/ is the home URL for your WebEx-hosted website
+  2. ${siteName}/ is your URL prefix for calling PHP commands
+  3. m.php is the Meeting page
+    3.1.  p.php -> WebEx Partner page
+	3.2.  o.php -> WebEx My Profile page
+	3.3.  s.php -> WebEx Security page
+	3.4.  m.php -> Meeting page for Meeting Center, Training Center and Sales Center
+	3.5.  m.php -> Meeting page for Event Center
+	3.6.  m.php -> Meeting page for Support Center
+	3.7.  smt.wbx -> SMARTtech page for Support Center
+	3.8.  c.php -> Access Anywhere (Remote Computer) page
+	3.9.  w.php -> Session Management page
+	3.10. detectbackup.php -> Backup Site Detection page 
+  4. AT=${command} is the Impromptu Meeting PHP command.
+
+== Partnet Login ==
+https://${siteName}.webex.com/faraday-tech-2/p.php?AT=LI
+  p.php?AT=LI
+    &WID=WebExID
+    [&TK=Ticket]
+    [&PW=Password]
+    [&MU=BackURL_or_GoBack]
+    [&EM=EmailAddress]
+    [&SK=SessionTicket]
+    [&FN=FirstName]
+    [&LN=LastName]
+    [&NPW=NewPassword]
+    [&BU=BackURL]
+
+_使用 URL API 範例
+https://community.cisco.com/t5/collaboration-blogs/recent-url-api-changes-get2post/ba-p/3660879
+-->
+</body>
+</html>
+
+
+
+
+
+==== 測試 XML API (不需要用到 SOAP UI) ====
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="textml; charset=utf-8" />
+</head>
+<body>
+<font size="5">WebEX XML API Test Page</font>
+
+<p>不需要使用 SOAP UI 測試</p>
+
+<br/>
+<!--<form action="https://api.webex.com/WBXService/XMLService" method="POST">-->
+<form action="https://${sitename}.webex.com/WBXService/XMLService" method="POST">
+    <textarea name="XML" rows="30" cols="150"></textarea>
+    <br/>
+    <input name="submit" type="submit" value="submit">
+</form>
+</body>
+</html>
+
+<!--
+/**
+ * ==================== LstsummaryUser request ====================
+ */
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <header>
+        <securityContext>
+            <siteName>${sitename}</siteName>
+            <webExID>${WebExId}</webExID>
+            <password>${password}</password>
+        </securityContext>
+    </header>
+    <body>
+        <bodyContent xsi:type="java:com.webex.service.binding.user.LstsummaryUser">
+            <listControl>
+                <startFrom>1</startFrom>
+                <maximumNum>10</maximumNum>
+                <listMethod>AND</listMethod>
+            </listControl>
+        </bodyContent>
+    </body>
+</message>
+
+/**
+ * ==================== GetUser request ====================
+ */
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<serv:message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <header>
+        <securityContext>
+            <siteName>${sitename}</siteName>
+            <webExID>${WebExId}</webExID>
+            <password>${password}</password>
+        </securityContext>
+    </header>
+    <body>
+        <bodyContent xsi:type="java:com.webex.service.binding.user.GetUser">
+            <webExId>${WebExId}</webExId>
+        </bodyContent>
+    </body>
+</serv:message>
+
+/**
+ * ==================== LstsummaryMeeting request ====================
+ */
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <header>
+        <securityContext>
+            <siteName>${sitename}</siteName>
+            <webExID>${WebExId}</webExID>
+            <password>${password}</password>
+        </securityContext>
+    </header>
+    <body>
+        <bodyContent xsi:type="java:com.webex.service.binding.meeting.LstsummaryMeeting">
+            <listControl>
+                <startFrom>1</startFrom>
+                <maximumNum>10</maximumNum>
+                <listMethod>OR</listMethod>
+            </listControl>
+        </bodyContent>
+    </body>
+</message>
+
+/**
+ * ==================== GetMeeting request ====================
+ */
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <header>
+        <securityContext>
+            <siteName>${sitename}</siteName>
+            <webExID>${WebExId}</webExID>
+            <password>${password}</password>
+        </securityContext>
+    </header>
+    <body>
+        <bodyContent xsi:type="java:com.webex.service.binding.meeting.GetMeeting">
+            <meetingKey>571631322</meetingKey>
+        </bodyContent>
+    </body>
+</message>
+
+/**
+ * ==================== CreateMeeting request ====================
+ */
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <header>
+        <securityContext>
+            <siteName>${sitename}</siteName>
+            <webExID>${WebExId}</webExID>
+            <password>${password}</password>
+        </securityContext>
+    </header>
+    <body>
+        <bodyContent xsi:type="java:com.webex.service.binding.meeting.CreateMeeting">
+            <accessControl>
+                <meetingPassword>1234qwer</meetingPassword>
+            </accessControl>
+            <metaData>
+                <confName>Test Creating Meeting</confName>
+                <meetingType>3</meetingType>
+                <agenda>Test</agenda>
+            </metaData>
+            <schedule>
+                <startDate>04/18/2019 13:30:00</startDate>
+                <openTime>900</openTime>
+                <duration>20</duration>
+                <timeZoneID>48</timeZoneID>
+            </schedule>
+        </bodyContent>
+    </body>
+</message>
+
+/**
+ * ==================== DelMeeting request ====================
+ */
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <header>
+        <securityContext>
+            <siteName>${sitename}</siteName>
+            <webExID>${WebExId}</webExID>
+            <password>${password}</password>
+        </securityContext>
+    </header>
+    <body>
+        <bodyContent xsi:type="java:com.webex.service.binding.meeting.DelMeeting">
+            <meetingKey>579842754</meetingKey>
+        </bodyContent>
+    </body>
+</message>
+-->
