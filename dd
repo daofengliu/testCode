@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<!--
+==== Environment Setup ====
+  == <script> tag directly ==
+  <script type="text/javascript" src="vue.min.js"></script>
+
+  == using CDN ==
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js"></script>
+
+  == using NPM ==
+  npm install vue
+
+  == using Vue CLI (Command Line Interface) ==
+  npm install --global vue-cli
+  npm install -g @vue/cli-service-global
+  yarn global add @vue/cli-service-global
+-->
+<head>
+    <meta charset="UTF-8" />
+    <title>Vue introduction</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.js"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js"></script>-->
+</head>
+<body>
+
+<!--
+==== Vue instance ====
+Every Vue application starts by creating a new Vue instance with the Vue constructor:
+
+  var vm = new Vue({
+      // options
+  })
+-->
+<div id="myApp1">
+    <h2>{{message}}</h2>
+</div>
+<script>
+/**
+ * == el (element) ==
+ * Provide the Vue instance an existing DOM element to mount on.
+ * It can be a CSS selector string or an actual HTMLElement.
+ * _提供讓 Vue instance 掛載的 DOM 元件，可以是 CSS selector 或是 HTMLElement
+ *
+ * _若沒指定 el 屬性，則必須手動 mount
+ *   let vm = new Vue({
+ *       data: data
+ *   });
+ *   vm.$mount('#vueApp');
+ *
+ * ps. 不要把 Vue 掛載至 <html> 或 <body>
+ *     使用 vue.js 非 vue.min.js 時，會出現 [Vue warn]: Do not mount Vue to <html> or <body> - mount to normal elements instead.
+ */
+let vm1 = new Vue({
+    el: '#myApp1',
+    data: {
+        message: 'Vue instance'
+    },
+    /* ==== Vue instance lifecycle hooks */
+    beforeCreate: function() {
+        console.log("[beforeCreate] - " + "$el = " + this.$el + ", $data = " + this.$data);
+        // $el = undefined, $data = undefined
+    },
+    created: function() {
+        console.log("[created] - " + "$el = " + this.$el + ", $data = " + this.$data);
+        // $el = undefined, $data = [object Object]
+    },
+    beforeMount: function() {
+        console.log("[beforeMount] - " + "$el = " + this.$el + ", $data = " + this.$data);
+        // $el = [object HTMLDivElement], $data = [object Object]
+    },
+    mounted: function() {
+        console.log("[mounted] - " + "$el = " + this.$el + ", $data = " + this.$data);
+        // $el = [object HTMLDivElement], $data = [object Object]
+    },
+    beforeUpdate: function() {
+        console.log("[beforeUpdate]");
+    },
+    updated: function() {
+        console.log("[updated]");
+    },
+    beforeDestroy: function() {
+        console.log("[beforeDestroy]");
+    },
+    destroyed: function() {
+        console.log("[destroyed]");
+    }
+});
+</script>
+
+<hr/>
+
+<!--
+==== template syntax ====
+Vue.js uses an HTML-based template syntax that allows you to declaratively bind the rendered DOM to the underlying Vue instance’s data.
+_Vue 使用 HTML 式的模板語法，允許使用宣告式的方式，將 Vue instance 的資料綁定至 DOM
+
+  == text ==
+  The most basic form of data binding is text interpolation using the "Mustache" syntax (double curly braces):
+  _Mustache 語法為"雙大括號" {{}}
+
+  The mustache tag will be replaced with the value of the msg property on the corresponding data object.
+  It will also be updated whenever the data object’s msg property changes.
+  _使用 {{}} 綁定至 Vue instance 的資料，當 Vue instance 該資料的值變更， {{}} 的內容也會一併變更
+
+    <span>hello {{msg}}</span> -> _ps. html element 內的部份更新
+    <span v-text="msg"></span> -> _ps. 更新 HTML element 的 textContent
+
+  ps. 如果不希望 DOM 的內容跟著 Vue instance 的 data 變更，可以使用 v-once
+
+  == raw HTML ==
+  The double mustaches interprets the data as plain text, not HTML.
+  In order to output real HTML, you will need to use the v-html directive
+  _使用 {{}} 綁定至 DOM 的資料，一律被解析為純文字
+  _如果資料內容為 HTML，則可以使用 v-html
+
+    <span v-html="vHtml"></span> -> ps. 更新 HTML element 的 innerHTML
+    
+    ps. Vue 2.x.y 使用 v-html
+        Vue 1.x.y 使用三層大括號 {{{ }}} 處理含有 HTML 內容的資料綁定
+
+  == attributes ==
+  Mustaches cannot be used inside HTML attributes.
+  Instead, use a v-bind directive
+  _{{}} 語法不能用在 HTML 元素的 attribute，若要綁定元素的特性，必須使用 v-bind 指令
+
+    <div v-bind:id="dynamicId"></div>
+
+  == javascript expressions ==
+  {{ number + 1 }}
+  {{ ok ? 'YES' : 'NO' }}
+  {{ message.split('').reverse().join('') }}
+
+  _ps. 以下為 statement 而非 expression
+  {{ var a = 1 }}
+  {{ if (ok) { return message } }}
+
+
+==== Directives (指令) ====
+Directives are special attributes with the v- prefix.
+Directive attribute values are expected to be binding expressions,
+  so the rules about JavaScript expressions and filters mentioned above apply here as well.
+A directive’s job is to reactively apply special behavior to the DOM when the value of its expression changes.
+
+  v-text
+  v-once
+  v-html
+  v-bind
+  v-show
+  v-pre
+  
+  == two-way binding using ==
+  v-model
+  
+  == conditionals ==
+  v-if
+  v-else
+  v-else-if
+  
+  == loops ==
+  v-for
+  
+  == events ==
+  v-on
+
+
+==== Shorthands ====
+  == v-bind shorthand ==
+  1. full syntax
+      <a v-bind:href="url"> ... </a>
+
+  2. shorthand
+      <a :href="url"> ... </a>
+
+  3. shorthand with dynamic argument (Vue 2.6.0+)
+      <a :[key]="url"> ... </a>
+
+  == v-on shorthand ==
+  1. full syntax
+      <a v-on:click="doSomething"> ... </a>
+
+  2. shorthand
+      <a @click="doSomething"> ... </a>
+
+  3. shorthand with dynamic argument (Vue 2.6.0+)
+      <a @[event]="doSomething"> ... </a>
+-->
+<div id="myApp2">
+    <h2>data binding</h2>
+    <h4 v-pre>使用 {{}} (或 v-html)</h4>
+    <div>{{vText}}</div>
+    <div v-text="vText"></div>
+
+    <h4>使用 v-html</h4>
+    <div>{{hHtml}} &nbsp;&nbsp;&nbsp;(被當成純文字處理)</div>
+    <div><span v-html="hHtml"></span>&nbsp;&nbsp;&nbsp;(被當成HTML處理)</div>
+    
+    <h4>使用 v-bind:attribute</h4>
+    <div v-bind:id="vBindAttr">&lt;div v-bind:id="vBindAttr"&gt;  &nbsp;&nbsp;&nbsp;(v-bind:${attribute} 綁定至 element 的 attribute，例如: &lt;div id="my-attr"&gt;)</div>
+    
+    <h4 v-pre>使用 {{javascript expressions}}</h4>
+    <div>{{jsExp + 5}}</div>
+    <div>{{jsExp > 10 ? 'gt 10' : 'lt 10'}}</div>
+
+    <h4>使用 v-if</h4>
+    <div v-if="vIfTrue">v-if 為 true</div>
+    <div v-if="vIfFalse">v-if 為 false</div>
+
+    <h4>使用 v-on</h4>
+    <input type="button" value="click me" v-on:click="vOnClickMe" /> (&lt;input type="button" value="click me" v-on:click="vOnClickMe"&gt;)
+</div>
+<script>
+let data2 = {
+    vText: 'hello {{}}',
+    hHtml: '<span>hello v-html</span>',
+    vBindAttr: 'my-attr',
+    jsExp: 10,
+    vIfTrue: true,
+    vIfFalse: false,
+    vOnClickMe: clickMe
+};
+let vm2 = new Vue({
+    el: '#myApp2',
+    data: data2
+});
+
+/* ps. Vue instance 的 $data 和 data 物件是相同的 */
+console.log(vm2.$data === data2); // true
+
+function clickMe() {
+    alert("click me");
+}
+</script>
+
+
+<!--
+==== Computed Properties and Watchers ====
+
+-->
+
+</body>
+</html>
