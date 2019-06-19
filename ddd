@@ -1,0 +1,221 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>jQuery utility</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+</head>
+<body>
+
+<div id="outerDiv">
+    <div id="innerDiv"></div>
+</div>
+
+<script type="text/javascript">
+/**
+ * jQuery.map()
+ *   Translate all items in an array or object to new array of items.
+ *   _把陣列或物件裡的所有項目，轉換到另一個陣列
+ *
+ * jQuery.grep()
+ *   Finds the elements of an array which satisfy a filter function.
+ *   The original array is not affected.
+ *   _找出符合 filter 的陣列元素，原本的陣列不受影響
+ *
+ * jQuery.merge()
+ *   Merge the contents of two arrays together into the first array.
+ *   _把兩個陣列的元素合併至第一個陣列參數
+ *
+ * jQuery.inArray()
+ *   Search for a specified value within an array and return its index (or -1 if not found).
+ *   _回傳陣列元素值的 index，若找不到值回傳 -1
+ *
+ * jQuery.contains()
+ *   Check to see if a DOM element is a descendant of another DOM element.
+ *   _檢查 DOM 元素是另個元素的後代
+ *
+ * jQuery.trim()
+ *
+ * jQuery.each()
+ */
+
+/*
+ * ==== jQuery.trim(str) ====
+ */
+console.log("\n========== $.trim() ==========");
+let trimStr = "  hello $.trim()  ";
+console.log("str = " + trimStr + ", $.trim(str) = " + $.trim(trimStr));
+
+/*
+ * ==== jQuery.contains() ====
+ *   jQuery.contains(containerElem, containedElem)
+ *
+ * The first argument must be a DOM element, not a jQuery object or plain JavaScript object.
+ * _參數型態必須是 DOM 的 Element，不能是 jQuery 物件，或是 js 物件
+ */
+console.log("\n========== $.contains ==========");
+let outerDiv = document.getElementById("outerDiv");
+let innerDiv = document.getElementById("innerDiv");
+console.log("$.contains(outerDiv, innerDiv) = " + $.contains(outerDiv, innerDiv));
+console.log("$.contains(innerDiv, outerDiv) = " + $.contains(innerDiv, outerDiv));
+/**** 參數非 Element 型態，所以會是 false ****/
+let $_outerDiv = $("#outerDiv");
+let $_innerDiv = $("#innerDiv");
+console.log("$.contains($_outerDiv, $_innerDiv) = " + $.contains($_outerDiv, $_innerDiv));
+
+/**
+ * ==== jQuery.each() ====
+ * We can break the $.each() loop at a particular iteration by making the callback function return false.
+ * Returning non-false is the same as a continue statement in a for loop; it will skip immediately to the next iteration.
+ * _在 callback function 回傳 false 可以中斷 loop，回傳 true 則是略過這筆到下一筆資料
+ *
+ *   jQuery.each(array, callback)
+ *   jQuery.each(object, callback)
+ *
+ * The $.each() function is not the same as $(selector).each(), which is used to iterate, exclusively, over a jQuery object.
+ * The $.each() function can be used to iterate over any collection, whether it is an object or an array.
+ * _$(selector).each() 是用在 loop 一個 jQuery 物件
+ * _$.each() 則是用在任何的集合物件 (object 或 array)
+ */
+console.log("\n========== $.each() - array ==========");
+$.each(["foo", "bar", "baz"], function(idx, val) {
+    console.log("array[" + idx + "] = " + val);
+});
+console.log("\n========== $.each() - object ==========");
+$.each({foo: "bar", baz: "bim"}, function(key, val) {
+    console.log("key = " + key + ", value = " + val);
+});
+
+/**
+ * ==== jQuery.inArray() ====
+ *   @return Number
+ *
+ *   jQuery.inArray(value, array [, fromIndex ])
+ *       value     - (Type: Anything)
+ *       array     - (Type: Array)
+ *       fromIndex - (Type: Number)
+ *           The index of the array at which to begin the search.
+ *           The default is 0, which will search the whole array.
+ */
+console.log("\n========== $.inArray() ==========");
+let myArray = [1, 2, 3, 5];
+console.log("index of 4 in [1, 2, 3, 5] = " + $.inArray(4, myArray)); // -1
+console.log("index of 3 in [1, 2, 3, 5] = " + $.inArray(3, myArray)); // 2
+
+/**
+ * ==== jQuery.extend( ====
+ *   @return Object
+ *
+ *   jQuery.extend(target [, object1 ] [, objectN ])
+ *   jQuery.extend([deep ], target, object1 [, objectN ])
+ *       deep    - (Type: Boolean)
+ *           If true, the merge becomes recursive (aka. deep copy).
+ *       target  - (Type: Object)
+ *       object1 - (Type: Object)
+ *       objectN - (Type: Object)
+ */
+console.log("\n========== $.extend() ==========");
+var object1 = {
+        apple: 0,
+        banana: {weight: 52, price: 100},
+        cherry: 97
+    };
+var object2 = {
+        banana: {price: 200},
+        durian: 100
+    };
+var extObj1 = $.extend({}, object1, object2);
+console.log("$.extend({}, object1, object2) = " + JSON.stringify(extObj1));
+// {"apple":0,"banana":{"price":200},"cherry":97,"durian":100} ...物件的 merge 會後蓋前
+var extObj2 = $.extend(true, {}, object1, object2);
+console.log("$.extend(true, {}, object1, object2) = " + JSON.stringify(extObj2));
+// {"apple":0,"banana":{"weight":52,"price":200},"cherry":97,"durian":100}
+
+/**
+ * ==== jQuery.map() ====
+ *   @return Array
+ *
+ *   jQuery.map(array, callback)
+ *       callback: function(arrayElem, arrayIndex)
+ *
+ *   jQuery.map(object, callback)
+ *       callback: function(objProp, objKey)
+ */
+console.log("\n========== $.map() ==========");
+let mapAry = jQuery.map(['a', 'b', 'c'], function(aryElem, idx) {
+                 return (aryElem.toUpperCase() + idx);
+             });
+console.log("['a', 'b', 'c'] after $.map() = " + JSON.stringify(mapAry)); // ["A0","B1","C2"]
+
+mapAry = jQuery.map({'a':'A', 'b':'B', 'c':'C'}, function(val, key) {
+             return (val);
+         });
+console.log("{'a':'A', 'b':'B', 'c':'C'} after $.map = " + JSON.stringify(mapAry)); // ["A","B","C"]
+
+/**
+ * ==== jQuery.grep() ====
+ *   @return Array
+ *
+ *   jQuery.grep(array, function [, invert ])
+ *     array    - (Type: ArrayLikeObject)
+ *     function - (Type: Function(Object elementOfArray, Integer indexInArray) => Boolean)
+ *     invert   - (Type: Boolean)
+ *       If "invert" is false, or not provided, then the function returns an array consisting of all elements for which "callback" returns true.
+ *       If "invert" is true, then the function returns an array consisting of all elements for which "callback" returns false.
+ *
+ * == $.map vs $.grep() ==
+ * The main difference is that grep() method filters an array and returns the filtered array,
+ *   while map() simple applies a function to each item in the array, thus returning a modified array.
+ * _$.map() 可以處理 array 或 object, $.grep() 只能處理 array
+ * _$.grep() 只過濾陣列內的元素(操作陣列的元素無用)，$.map() 可以操作陣列內的元素
+ */
+console.log("\n========== $.grep() ==========");
+let grepAry = [1, 9, 3, 7, 2, 6];
+let newGrepAry = $.grep(grepAry, function(aryElem, idx) {
+                     return (aryElem > 5);
+                 });
+console.log("[1, 9, 3, 7, 2, 6] after $.grep() = " + JSON.stringify(newGrepAry)); // [9,7,6]
+newGrepAry = $.grep(grepAry, function(aryElem, idx) {
+                 return (aryElem + 100);
+             });
+console.log("[1, 9, 3, 7, 2, 6] after $.grep() = " + JSON.stringify(newGrepAry)); // [1,9,3,7,2,6]
+
+/**
+ * ==== jQuery.merge() ====
+ *   @return Array
+ *
+ *   jQuery.merge(first, second)
+ *       first  - (Type: ArrayLikeObject)
+ *       second - (Type: ArrayLikeObject)
+ */
+console.log("\n========== $.merge() ==========");
+let mergeAry = $.merge(['a', 'b'], ['1', '2', 'a']);
+console.log("['a', 'b'], ['1', '2', 'a'] after $.merge() = " + JSON.stringify(mergeAry)); // ["a","b","1","2","a"]
+
+/**
+ * ==== $.type() ====
+ *   jQuery.type( undefined ) === "undefined"
+ *   jQuery.type() === "undefined"
+ *   jQuery.type( window.notDefined ) === "undefined"
+ *   jQuery.type( null ) === "null"
+ *   jQuery.type( true ) === "boolean"
+ *   jQuery.type( new Boolean() ) === "boolean"
+ *   jQuery.type( 3 ) === "number"
+ *   jQuery.type( new Number(3) ) === "number"
+ *   jQuery.type( "test" ) === "string"
+ *   jQuery.type( new String("test") ) === "string"
+ *   jQuery.type( function(){} ) === "function"
+ *   jQuery.type( [] ) === "array"
+ *   jQuery.type( new Array() ) === "array"
+ *   jQuery.type( new Date() ) === "date"
+ *   jQuery.type( new Error() ) === "error" // as of jQuery 1.9
+ *   jQuery.type( /test/ ) === "regexp"
+ */
+console.log("\n========== $.type() ==========");
+console.log("$.type(undefined)) = " + $.type(undefined)); // undefined
+console.log("$.type({})) = " + $.type({})); // object
+console.log("$.type([])) = " + $.type([])); // array
+</script>
+
+</body>
+</html>
