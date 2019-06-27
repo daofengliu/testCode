@@ -1,0 +1,207 @@
+//package idv;
+//
+//import org.apache.pdfbox.pdmodel.PDDocument;
+//import org.apache.pdfbox.rendering.ImageType;
+//import org.apache.pdfbox.rendering.PDFRenderer;
+//import org.apache.pdfbox.tools.imageio.ImageIOUtil;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+//
+//import java.awt.image.BufferedImage;
+//import java.io.File;
+//import java.io.IOException;
+//
+///**
+// * ==== Maven ====
+// * <dependency>
+// *     <groupId>org.apache.pdfbox</groupId>
+// *     <artifactId>pdfbox</artifactId>
+// *     <version>2.0.15</version>
+// * </dependency>
+// * <dependency>
+// *     <groupId>org.apache.pdfbox</groupId>
+// *     <artifactId>pdfbox-tools</artifactId>
+// *     <version>2.0.15</version>
+// * </dependency>
+// */
+//public class PdfConverterUtil {
+//
+//    private static final Logger LOGGER = LoggerFactory.getLogger(PdfConverterUtil.class);
+//    private static final String OUTPUT_DIR = "D:\\tmp\\";
+//
+//    public enum ImgType {
+//        JPG, JPEG, PNG, BMP, GIF;
+//    }
+//
+//    public void pdf2Image(String filePath, ImgType extension) {
+//        File file = new File(filePath);
+//        if (!file.exists()) {
+//            String msg = "file: " + filePath + " is not found!";
+//            LOGGER.warn(msg);
+//            throw new RuntimeException(msg);
+//        }
+//
+//        try (final PDDocument document = PDDocument.load(file)) {
+//            PDFRenderer pdfRenderer = new PDFRenderer(document);
+//            for (int page = 0; page < document.getNumberOfPages(); ++page) {
+//                BufferedImage bim = pdfRenderer.renderImageWithDPI(page, 300, ImageType.RGB);
+//                ImageIOUtil.writeImage(bim, String.format(OUTPUT_DIR + "pdf-%d.%s", page + 1, extension.name().toLowerCase()), 300);
+//            }
+//            document.close();
+//        } catch (IOException ex) {
+//            ex.printStackTrace();
+//        }
+//    }
+//
+//    public static void main(String[] args) {
+//        new PdfConverterUtil().pdf2Image(OUTPUT_DIR + "IntelliJIDEA hotkey.pdf", ImgType.PNG);
+//    }
+//
+//}
+
+
+
+
+
+
+
+==== string.html ====
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>javaScript String</title>
+
+<script type="text/javascript">	
+/**
+ * ==== template literal ====
+ * _使用 ` (反引號)括住
+ *
+ * == syntax ==
+ *   `string text`
+ *
+ *   == multi-line strings ==
+ *   `string text line 1
+ *    string text line 2`
+ *
+ *   Any newline characters inserted in the source are part of the template literal.
+ *   _使用 `` 包住的內容，會保留所有換行和空格
+ *
+ *   == expression interpolation ==
+ *   `string text ${expression} string text`
+ *
+ *   _在模版字符串中，還可以透過 ${...} 嵌入變數或表達式
+ *
+ *   == tagged templates ==
+ *   tag `string text ${expression} string text`
+ *
+ *   _標籤模版，是一種特殊執行函式的方式，直接在函式後面加上模板字串，該模板字串就是函式的參數 ( 函式不用加() )
+ *   _標籤模版的模板字串，若包含 ${}，則會把模板字串切成多個參數
+ *   _標籤模版的函式，第一個參數會是模板字串以 ${} 切割後的陣列，第二個以後的參數會是 ${} 所嵌入的陣例值
+ *
+ *   TODO: 標籤模版應用
+ */
+console.log("\n========== template literal - multi-line strings ==========");
+let varTempLitA11 = '<div>\n' +
+    '<span>hello world</span>\n' +
+'</div>\n';
+console.log(varTempLitA11);
+
+let varTempLitA12 = `<div>
+    <span>hello world</span>
+</div>`;
+console.log(varTempLitA12);
+
+console.log("\n========== template literal - expression interpolation ==========");
+let varTempLitA21 = 'Tony',
+    varTempLitA22 = 3,
+    varTempLitA23 = 7;
+console.log(`hello, my name is ${varTempLitA21}, my lucky number is ${varTempLitA22 * varTempLitA23}`);
+/**** 在 `` 內的 ${} 可以使用變數，或是運算式 ****/
+
+console.log("\n========== template literal - tagged templates ==========");
+console.log('Hello World'); // "Hello World"   (為 string)
+console.log `Hello World`;  // ["Hello World"] (為 array)
+
+funTempLitA31 `hello world`;
+// ["hello world"]，陣列長度為 1
+// []，             陣列長度為 0
+/**** funTempLitA31 這個函式接著模板字串，模板字串不包含 ${} ****/
+
+let varTempLitA31 = 'Tony',
+    varTempLitA32 = 'Taiwan';
+funTempLitA31 `<p>My name is ${varTempLitA31} and i come from ${varTempLitA32}</p>`;
+// ["<p> My name is ", " and i come from ", "</p>"]，陣列長度為 3
+// ["Tony", "Taiwan"]，                              陣列長度為 2
+/**** funTempLitA31 這個函式接著模板字串，模板字串包含 ${}，可以看到第一個參數會是模板字串以 ${} 切割後的陣列，第二個以後的參數會是 ${} 所嵌入的陣列值 ****/
+
+function funTempLitA31(str, ...argExp) {
+    console.log(str);
+    console.log(argExp);
+}
+</script>
+
+</head>
+<body>
+</body>
+</html>
+
+
+
+
+
+http://tutorials.jenkov.com/
+https://howtodoinjava.com/
+https://www.journaldev.com/
+http://www.java2s.com/
+http://www.javapractices.com/home/HomeAction.do
+
+
+
+==== Spring MVC resource ====
+<mvc:resources mapping="/js/**" location="/js/" />
+<mvc:resources mapping="/css/**" location="/css/" />
+<mvc:resources mapping="/images/**" location="/images/" />
+
+
+
+== https web.xml ==
+<security-constraint>
+    <web-resource-collection>
+        <web-resource-name>SecureConnection</web-resource-name>
+        <url-pattern>*</url-pattern>
+        <http-method>GET</http-method>
+        <http-method>POST</http-method>
+    </web-resource-collection>
+    <user-data-constraint>
+        <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+    </user-data-constraint>
+</security-constraint>
+
+<!-- 某些特殊情況, 如 Domain Name 沒有購買 HTTPS 憑證會造成網頁顯示問題, 就必須設計一些導向頁先走 HTTP, 再導為HTTPS -->
+<security-constraint>
+    <!-- OMIT auth-constraint (導向頁排除在 HTTPS 的限制範圍) -->
+    <web-resource-collection>
+        <web-resource-name>SecureConnection</web-resource-name>
+        <url-pattern>/index.html</url-pattern>
+    </web-resource-collection>
+</security-constraint>
+<security-constraint>
+    <web-resource-collection>
+        <web-resource-name>SecureConnection</web-resource-name>
+        <url-pattern>*</url-pattern>
+        <http-method>GET</http-method>
+        <http-method>POST</http-method>
+    </web-resource-collection>
+    <user-data-constraint>
+        <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+    </user-data-constraint>
+</security-constraint>
+https://javascript.info/
+https://www.w3resource.com/
+https://github.com/airbnb/javascript
+https://jigsawye.gitbooks.io/mostly-adequate-guide/
+https://github.com/getify/You-Dont-Know-JS
+http://es6.ruanyifeng.com/ (簡中)
+https://exploringjs.com/
+http://eloquentjavascript.net/
